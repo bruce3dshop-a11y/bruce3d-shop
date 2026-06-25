@@ -1,0 +1,15 @@
+FROM node:20-alpine
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm install --no-frozen-lockfile
+
+RUN pnpm --filter @workspace/api-server run build
+
+EXPOSE 5000
+
+CMD node --enable-source-maps artifacts/api-server/dist/index.mjs
