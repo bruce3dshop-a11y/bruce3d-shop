@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd ../.. && npm install -g pnpm@latest && pnpm install && pnpm --filter @workspace/bruce3d run build"
+buildCommand = "cd ../.. && npm install -g pnpm@latest serve && pnpm install && pnpm --filter @workspace/bruce3d run build"
 
 [deploy]
-startCommand = "npx serve -s ./dist/public -l $PORT"
+startCommand = "serve -s dist/public -l $PORT"
