@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm install -g pnpm@9 serve && cd ../.. && pnpm install --no-frozen-lockfile"]
+
+[phases.build]
+cmds = ["cd ../.. && pnpm --filter @workspace/bruce3d run build"]
+
+[start]
+cmd = "serve -s dist/public -l $PORT"
