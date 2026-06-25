@@ -1,8 +1,10 @@
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 COPY . .
 RUN pnpm install --no-frozen-lockfile
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm --filter @workspace/bruce3d run build
 
 FROM nginx:alpine
