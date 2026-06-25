@@ -6,10 +6,12 @@ import { eq } from "drizzle-orm";
 const USER_COOKIE = "bruce3d_user";
 const ADMIN_COOKIE = "bruce3d_admin";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const cookieOpts = {
   httpOnly: true,
-  sameSite: "lax" as const,
-  secure: false,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  secure: isProduction,
   maxAge: 30 * 24 * 60 * 60 * 1000,
 };
 
