@@ -1,0 +1,15 @@
+FROM node:20-alpine
+
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+WORKDIR /app
+
+COPY . .
+
+RUN pnpm install --no-frozen-lockfile
+
+RUN pnpm --filter @workspace/bruce3d run build
+
+RUN npm install -g serve@13
+
+CMD sh -c "serve -s /app/artifacts/bruce3d/dist -l $PORT"
