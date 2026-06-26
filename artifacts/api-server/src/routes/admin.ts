@@ -47,9 +47,10 @@ router.get("/stats", requireAdmin, async (_req, res) => {
 
     const [totalUsersRow] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
 
+    // Fix: count revenue from both 'confirmed' AND 'completed' orders
     const [revenueRow] = await db.select({
       total: sql<string>`COALESCE(SUM(price::numeric), 0)`,
-    }).from(ordersTable).where(eq(ordersTable.status, "confirmed"));
+    }).from(ordersTable).where(sql`status IN ('confirmed', 'completed')`);
 
     const last30 = await db.select({ count: sql<number>`count(*)` }).from(ordersTable)
       .where(sql`created_at > now() - interval '30 days'`);
@@ -187,7 +188,7 @@ router.get("/clients", requireAdmin, async (_req, res) => {
       telegram: usersTable.telegram,
       created_at: usersTable.created_at,
       orderCount: sql<number>`(SELECT count(*) FROM orders WHERE user_id = users.id)`.as("orderCount"),
-      totalSpent: sql<number>`(SELECT coalesce(sum(price::numeric), 0) FROM orders WHERE user_id = users.id AND status = 'confirmed')`.as("totalSpent"),
+      totalSpent: sql<number>`(SELECT coalesce(sum(price::numeric), 0) FROM orders WHERE user_id = users.id AND status IN ('confirmed', 'completed'))`.as("totalSpent"),
     }).from(usersTable).orderBy(desc(usersTable.created_at));
     res.json({ clients: users });
   } catch (e: any) {
