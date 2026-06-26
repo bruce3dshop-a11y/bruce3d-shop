@@ -24,20 +24,28 @@ export async function uploadBuffer(
   }
 
   const timestamp = String(Math.floor(Date.now() / 1000));
-  const params = { folder, timestamp };
+  const params: Record<string, string> = { folder, timestamp };
   const signature = sign(params, API_SECRET!);
 
-  const form = new FormData();
-  form.append("file", new Blob([buffer], { type: mimeType }), originalName);
-  form.append("folder", folder);
-  form.append("timestamp", timestamp);
-  form.append("api_key", API_KEY!);
-  form.append("signature", signature);
+  const base64File = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+  const body = new URLSearchParams({
+    file: base64File,
+    folder,
+    timestamp,
+    api_key: API_KEY!,
+    signature,
+  });
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`,
-    { method: "POST", body: form }
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    }
   );
+
   const data = await res.json() as any;
   if (!res.ok) throw new Error(data.error?.message || "Ошибка загрузки в Cloudinary");
 
