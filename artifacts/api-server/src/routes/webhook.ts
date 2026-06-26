@@ -6,6 +6,7 @@ import {
 import { adminChatId, setAdminChatId } from "../lib/adminState";
 import { getConfig, updateConfig } from "../lib/configStore";
 import { isAdminSession } from "../lib/session";
+import { uploadBuffer, isStorageConfigured } from "../lib/storage";
 import { db } from "@workspace/db";
 import {
   ordersTable, orderStatusHistoryTable, reviewsTable,
@@ -86,7 +87,6 @@ router.get("/config", (req, res) => {
   });
 });
 
-// Auto-detect Replit domain
 function getReplitDomain(): string {
   return process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(",")[0] || "";
 }
@@ -100,17 +100,14 @@ router.put("/config", async (req, res) => {
   const updates: Record<string, string> = {};
   if (botToken && botToken.trim()) updates.botToken = botToken.trim();
   if (chatId !== undefined) updates.adminChatId = chatId.trim();
-  // Auto-detect domain from Replit env if not provided
   const domain = (webhookDomain && webhookDomain.trim()) || getReplitDomain();
   if (domain) updates.webhookDomain = domain;
   updateConfig(updates);
-  // Also update in-memory adminChatId if changed
   if (updates.adminChatId !== undefined) {
     const { setAdminChatId } = await import("../lib/adminState");
     setAdminChatId(updates.adminChatId);
   }
   const bot = await getBotInfo();
-  // Auto-register webhook when token is saved
   let webhookResult: { ok: boolean; description?: string } | null = null;
   if (updates.botToken && domain) {
     try {
@@ -128,7 +125,6 @@ router.put("/config", async (req, res) => {
 // ---- Register webhook ----
 router.post("/register", async (req, res) => {
   const { domain: reqDomain } = req.body as { domain?: string };
-  // Use provided domain, or auto-detect from Replit env
   const domain = (reqDomain && reqDomain.trim()) || getReplitDomain();
   if (!domain) return res.status(400).json({ error: "domain required (or REPLIT_DEV_DOMAIN not set)" });
   const { getBotToken } = await import("../lib/configStore");
@@ -166,6 +162,14 @@ router.get("/status", async (_req, res) => {
     suggestedWebhookUrl: domain ? `https://${domain}/api/webhook/telegram` : null,
   });
 });
+
+function statusEmoji(status: string) {
+  const map: Record<string, string> = {
+    new: "🆕", accepted: "✅", working: "🔧", printing: "🖨", postprocess: "✨",
+    ready: "📦", shipped: "🚚", completed: "🎉", confirmed: "💚", rejected: "❌",
+  };
+  return map[status] || "❓";
+}
 
 // ---- Main webhook handler ----
 router.post("/telegram", async (req, res) => {
@@ -294,8 +298,12 @@ router.post("/telegram", async (req, res) => {
     const text = (msg.text || "").trim();
     const firstName = msg.from?.first_name || "Пользователь";
 
-    // /start — register admin
+    // /start — register admin (PROTECTED: only if no admin set, or already the same admin)
     if (text.startsWith("/start")) {
+      if (adminChatId && chatId !== adminChatId) {
+        await sendTelegram(chatId, "⛔ Этот бот уже настроен для другого администратора.\n\nЕсли вы владелец бота — зайдите в панель администратора и сбросьте настройки.");
+        return res.json({ ok: true });
+      }
       setAdminChatId(chatId);
       await sendTelegramWithKeyboard(chatId,
         `✅ <b>Добро пожаловать, ${firstName}!</b>\n\nВы подключены как администратор <b>BRUCE 3D SHOP</b>.\n\nВсе уведомления о заказах, отзывах и файлах будут приходить сюда. 🚀\n\nОтправьте фото — оно сразу попадёт в Галерею на сайте!`,
@@ -362,20 +370,36 @@ router.post("/telegram", async (req, res) => {
       return res.json({ ok: true });
     }
 
-    // ---- Photo → Gallery ----
+    // ---- Photo → Gallery (with Cloudinary re-upload for permanent URLs) ----
     if (msg.photo && msg.photo.length > 0) {
       const photo = msg.photo[msg.photo.length - 1];
-      const fileUrl = await getTelegramFileUrl(photo.file_id);
-      if (fileUrl) {
+      const telegramFileUrl = await getTelegramFileUrl(photo.file_id);
+      if (telegramFileUrl) {
         const caption = msg.caption || "Работа BRUCE 3D SHOP";
+        let imageUrl = telegramFileUrl;
+
+        // Re-upload to Cloudinary for a permanent URL (Telegram URLs expire)
+        if (isStorageConfigured()) {
+          try {
+            const response = await fetch(telegramFileUrl);
+            const buffer = Buffer.from(await response.arrayBuffer());
+            imageUrl = await uploadBuffer(buffer, `gallery-${photo.file_id}.jpg`, "image/jpeg", "gallery");
+            console.log(`[gallery] Uploaded to Cloudinary: ${imageUrl}`);
+          } catch (e) {
+            console.error("[gallery] Cloudinary upload failed, falling back to Telegram URL:", e);
+          }
+        }
+
         const [inserted] = await db.insert(galleryItemsTable).values({
           title: caption.slice(0, 100),
-          image_url: fileUrl,
+          image_url: imageUrl,
           telegram_file_id: photo.file_id,
           category: "3d-print",
         }).returning();
+
+        const isCloudinary = imageUrl.includes("cloudinary.com");
         await sendTelegramWithKeyboard(chatId,
-          `✅ Фото добавлено в Галерею!\n📝 ${caption.slice(0, 80)}\n🆔 ID: ${inserted.id}`,
+          `✅ Фото добавлено в Галерею!\n📝 ${caption.slice(0, 80)}\n🆔 ID: ${inserted.id}${isCloudinary ? "\n☁️ Сохранено в Cloudinary (постоянная ссылка)" : "\n⚠️ Временная ссылка Telegram (настройте Cloudinary для постоянных URL)"}`,
           { inline_keyboard: [[{ text: "🗑 Удалить из галереи", callback_data: `gallery_delete_${inserted.id}` }]] }
         );
       }
@@ -400,9 +424,9 @@ router.post("/telegram", async (req, res) => {
       const revenue = allOrders.filter(o => ["confirmed", "completed"].includes(o.status))
         .reduce((s, o) => s + Number(o.price || 0), 0);
       const users = await db.select().from(usersTable);
-      const pendingReviews = await db.select().from(reviewsTable).where(eq(reviewsTable.approved, false));
+      const pendingReviewsList = await db.select().from(reviewsTable).where(eq(reviewsTable.approved, false));
       await sendTelegramWithKeyboard(chatId,
-        `📊 <b>Статистика BRUCE 3D SHOP</b>\n\n📦 Всего заказов: <b>${total}</b>\n🆕 Новых: <b>${newCount}</b>\n🔧 В работе: <b>${inWork}</b>\n💰 Выручка: <b>${revenue.toLocaleString("ru")} ₽</b>\n👥 Клиентов: <b>${users.length}</b>\n⭐ Отзывов на модерации: <b>${pendingReviews.length}</b>`,
+        `📊 <b>Статистика BRUCE 3D SHOP</b>\n\n📦 Всего заказов: <b>${total}</b>\n🆕 Новых: <b>${newCount}</b>\n🔧 В работе: <b>${inWork}</b>\n💰 Выручка: <b>${revenue.toLocaleString("ru")} ₽</b>\n👥 Клиентов: <b>${users.length}</b>\n⭐ Отзывов на модерации: <b>${pendingReviewsList.length}</b>`,
         mainKeyboard()
       );
     } else if (text === "👥 Клиенты") {
@@ -450,29 +474,16 @@ router.post("/telegram", async (req, res) => {
       await sendTelegram(chatId, "📢 <b>Рассылка всем клиентам с Telegram</b>\n\nНапишите текст сообщения (будет отправлен от имени BRUCE 3D SHOP):");
     } else if (text === "/help" || text === "❓ Помощь") {
       await sendTelegramWithKeyboard(chatId,
-        `🤖 <b>BRUCE 3D SHOP Bot</b>\n\n<b>Кнопки меню:</b>\n📦 Заказы — список последних 10 заказов\n📊 Статистика — сводка сайта\n👥 Клиенты — список клиентов\n⭐ Отзывы — модерация отзывов\n🖼 Галерея — список фото с кнопками удаления\n📢 Рассылка — сообщение всем клиентам\n\n<b>Автоматически:</b>\n🆕 Новый заказ — кнопки принять/отклонить/счёт\n📎 Файл заказа — получаете прямо в чат\n⭐ Новый отзыв — кнопки модерации\n\n<b>Галерея:</b>\n📸 Отправьте фото (с подписью) → сразу в Галерею!\n🗑 После загрузки — кнопка удалить\n🖼 Галерея — показать все фото с кнопками удаления\n\n<b>Управление статусами заказа:</b>\nВсе кнопки прямо в уведомлениях\n✅ Принять → 💰 Счёт → 🔧 В работе → 📦 Готов → 🚚 Отправлен → 🎉 Завершён\n\n<b>Команды:</b>\n/start — переподключиться\n/orders — заказы\n/stats — статистика`,
-        mainKeyboard()
-      );
-    } else {
-      await sendTelegramWithKeyboard(chatId,
-        `Используйте кнопки меню ниже или /help для справки`,
+        `🤖 <b>BRUCE 3D SHOP Bot</b>\n\n<b>Кнопки меню:</b>\n📦 Заказы — список последних 10 заказов\n📊 Статистика — сводка сайта\n👥 Клиенты — список клиентов\n⭐ Отзывы — модерация отзывов\n🖼 Галерея — список фото с кнопками удаления\n📢 Рассылка — сообщение всем клиентам\n\n<b>Автоматически:</b>\n🆕 Новый заказ — кнопки принять/отклонить/счёт\n📎 Файл заказа — получаете прямо в чат\n⭐ Новый отзыв — кнопки модерации\n\n<b>Галерея:</b>\n📸 Отправьте фото (с подписью) → сразу в Галерею!\n🗑 После загрузки — кнопка удалить\n\n<b>Управление статусами заказа:</b>\n✅ Принять → 💰 Счёт → 🔧 В работе → 📦 Готов → 🚚 Отправлен → 🎉 Завершён`,
         mainKeyboard()
       );
     }
 
     return res.json({ ok: true });
   } catch (e) {
-    console.error("Webhook error:", e);
-    return res.json({ ok: true });
+    console.error("[webhook/telegram]", e);
+    return res.status(500).json({ ok: false });
   }
 });
-
-function statusEmoji(s: string): string {
-  const map: Record<string, string> = {
-    new: "🆕", accepted: "✅", working: "🔧", ready: "📦",
-    shipped: "🚚", completed: "🎉", rejected: "❌", confirmed: "💳",
-  };
-  return map[s] || "•";
-}
 
 export default router;
