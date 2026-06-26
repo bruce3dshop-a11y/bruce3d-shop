@@ -11,6 +11,8 @@ import { apiFetch } from "@/lib/api";
 import { VideoBackground } from "@/components/VideoBackground";
 import servicesImg from "@assets/IMG_3676_1782231561624.jpeg";
 
+const TELEGRAM_URL = "https://t.me/BRUCE_3D_SHOP_BOT";
+
 function AnimatedCounter({ target, suffix = "" }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const started = useRef(false);
@@ -51,7 +53,7 @@ const quickActions = [
   { icon: <Search className="w-5 h-5" />, label: "Трекер", href: "/tracker", color: "border-cyan-500/30 hover:border-cyan-400/50 text-cyan-400" },
   { icon: <Star className="w-5 h-5" />, label: "Отзывы", href: "/reviews", color: "border-yellow-500/30 hover:border-yellow-400/50 text-yellow-400" },
   { icon: <Package className="w-5 h-5" />, label: "Галерея", href: "/gallery", color: "border-green-500/30 hover:border-green-400/50 text-green-400" },
-  { icon: <MessageSquare className="w-5 h-5" />, label: "Telegram", href: "https://t.me/bruce3dshop", color: "border-primary/30 hover:border-primary/60 text-primary", external: true },
+  { icon: <MessageSquare className="w-5 h-5" />, label: "Telegram", href: TELEGRAM_URL, color: "border-primary/30 hover:border-primary/60 text-primary", external: true },
 ];
 
 export default function Home() {
@@ -76,15 +78,10 @@ export default function Home() {
 
       {/* ====== CINEMATIC HERO ====== */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Animated canvas background */}
         <VideoBackground />
-
-        {/* Subtle top gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-background/80 pointer-events-none z-[1]" />
 
         <div className="container relative z-10 mx-auto px-4 md:px-8 py-24">
-
-          {/* ── CENTERED BRAND TITLE ── */}
           <div className="text-center mb-10">
             <motion.div
               initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
@@ -123,10 +120,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col lg:flex-row items-center justify-between gap-16">
-
-            {/* LEFT — text content */}
             <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl">
-              {/* Logo / Brand image */}
               <motion.div
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
                 className="mb-6"
@@ -138,7 +132,6 @@ export default function Home() {
                 />
               </motion.div>
 
-              {/* Tagline */}
               <motion.p
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 className="text-muted-foreground max-w-lg mb-8 text-base md:text-lg leading-relaxed"
@@ -147,7 +140,6 @@ export default function Home() {
                 Любая сложность. Срок от&nbsp;24 часов. Отправляем по всей России и миру.
               </motion.p>
 
-              {/* CTA buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
                 className="flex flex-col sm:flex-row gap-4 w-full justify-center lg:justify-start mb-6"
@@ -169,7 +161,6 @@ export default function Home() {
                 </Link>
               </motion.div>
 
-              {/* Quick action grid */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.56 }}
                 className="grid grid-cols-3 gap-2 w-full max-w-sm mx-auto lg:mx-0"
@@ -192,14 +183,12 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* RIGHT — logo orb */}
             <motion.div
               initial={{ opacity: 0, scale: 0.75, rotate: -5 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ delay: 0.2, duration: 0.9, type: "spring", stiffness: 80 }}
               className="flex-shrink-0 relative"
             >
-              {/* Multiple glow rings */}
               <motion.div
                 className="absolute inset-0 rounded-full pointer-events-none"
                 style={{
@@ -215,7 +204,6 @@ export default function Home() {
                 animate={{ scale: [1.6, 1.8, 1.6], opacity: [0.4, 0.15, 0.4] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               />
-              {/* Solid black circle background behind logo */}
               <div
                 className="relative w-64 h-64 md:w-80 md:h-80 lg:w-[420px] lg:h-[420px] rounded-full overflow-hidden flex items-center justify-center"
                 style={{ background: "#050010" }}
@@ -235,10 +223,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/60 to-transparent pointer-events-none z-[1]" />
 
-        {/* Scroll indicator */}
         <motion.div
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-primary/50"
           animate={{ y: [0, 8, 0] }}
