@@ -21,7 +21,8 @@ app.use(
     },
   }),
 );
-const allowedOrigin = process.env.FRONTEND_URL || true;
+const rawFrontendUrl = process.env.FRONTEND_URL;
+const allowedOrigin = rawFrontendUrl ? rawFrontendUrl.replace(/\/$/, "") : true;
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
