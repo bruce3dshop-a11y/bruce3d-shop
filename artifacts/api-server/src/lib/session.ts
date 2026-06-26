@@ -12,11 +12,12 @@ const cookieOpts = {
   httpOnly: true,
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   secure: isProduction,
+  signed: true,
   maxAge: 30 * 24 * 60 * 60 * 1000,
 };
 
 export async function getSessionUser(req: Request) {
-  const userId = req.cookies?.[USER_COOKIE];
+  const userId = req.signedCookies?.[USER_COOKIE];
   if (!userId) return null;
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, Number(userId))).limit(1);
@@ -39,7 +40,7 @@ export function setAdminSession(res: Response) {
 }
 
 export function isAdminSession(req: Request) {
-  return req.cookies?.[ADMIN_COOKIE] === "1";
+  return req.signedCookies?.[ADMIN_COOKIE] === "1";
 }
 
 export function clearAdminSession(res: Response) {
