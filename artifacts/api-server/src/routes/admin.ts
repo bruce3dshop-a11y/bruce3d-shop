@@ -5,6 +5,8 @@ import { eq, sql, desc } from "drizzle-orm";
 import { isAdminSession } from "../lib/session";
 import { sendTelegram } from "../lib/telegram";
 import { getConfig, updateConfig } from "../lib/configStore";
+import { createPayment, isYookassaConfigured } from "../lib/yookassa";
+import { broadcastOrderUpdate } from "./chat";
 
 const router = Router();
 
@@ -77,6 +79,8 @@ router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
     await db.update(ordersTable).set({ status, updated_at: new Date() }).where(eq(ordersTable.id, orderId));
     await db.insert(orderStatusHistoryTable).values({ order_id: orderId, status, comment });
 
+    broadcastOrderUpdate(orderId, { type: "status", status });
+
     const statusMsg: Record<string, string> = {
       calculating: "🔍 Ваш заказ рассчитывается. Ожидайте сообщения о стоимости.",
       accepted: "✅ Ваш заказ принят в производство!",
@@ -104,27 +108,70 @@ router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
 
 router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
   try {
-    const { price, paymentLink } = req.body;
+    const { price } = req.body;
     const orderId = Number(req.params.id);
+
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
+      return res.status(400).json({ error: "Некорректная сумма" });
+    }
+
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+    if (!order) return res.status(404).json({ error: "Заказ не найден" });
+
+    let paymentLink: string | null = null;
+    let confirmationUrl: string | null = null;
+
+    if (isYookassaConfigured()) {
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || "https://bruce3d-shop.ru";
+        const returnUrl = `${frontendUrl.replace(/\/$/, "")}/order/${orderId}`;
+        const payment = await createPayment({
+          amount: Number(price),
+          orderId,
+          orderNumber: order.order_number,
+          description: `Оплата заказа #${order.order_number} — BRUCE 3D SHOP`,
+          returnUrl,
+        });
+        paymentLink = `yookassa:${payment.id}`;
+        confirmationUrl = payment.confirmation?.confirmation_url || null;
+      } catch (e: any) {
+        console.error("[yookassa createPayment]", e);
+        return res.status(502).json({ error: `Ошибка ЮКасса: ${e.message}` });
+      }
+    }
+
     await db.update(ordersTable).set({
       price: String(price),
-      payment_link: paymentLink || null,
+      payment_link: paymentLink,
       status: "accepted",
       updated_at: new Date(),
     }).where(eq(ordersTable.id, orderId));
+
     await db.insert(orderStatusHistoryTable).values({
       order_id: orderId,
       status: "accepted",
-      comment: `Выставлен счёт: ${price} ₽${paymentLink ? " | Ссылка оплаты: " + paymentLink : ""}`,
+      comment: `Выставлен счёт: ${price} ₽${isYookassaConfigured() ? " (ЮКасса)" : ""}`,
     });
 
-    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
-    if (order) {
-      const msg = `💰 <b>Выставлен счёт по заказу #${order.order_number}</b>\n\n💵 Сумма: <b>${price} ₽</b>${paymentLink ? `\n\n🔗 Ссылка для оплаты: ${paymentLink}` : ""}\n\nЗайдите в личный кабинет, чтобы подтвердить заказ.`;
-      notifyClient(orderId, msg).catch(console.error);
-    }
-    res.json({ ok: true });
-  } catch {
+    broadcastOrderUpdate(orderId, {
+      type: "price",
+      price,
+      paymentUrl: confirmationUrl,
+    });
+
+    const msg = confirmationUrl
+      ? `💰 <b>Счёт по заказу #${order.order_number}</b>\n\n💵 Сумма: <b>${price} ₽</b>\n\n🔗 <a href="${confirmationUrl}">Оплатить заказ</a>\n\nПосле оплаты заказ будет подтверждён автоматически.`
+      : `💰 <b>Счёт по заказу #${order.order_number}</b>\n\n💵 Сумма: <b>${price} ₽</b>\n\nЗайдите в личный кабинет, чтобы подтвердить заказ.`;
+
+    notifyClient(orderId, msg).catch(console.error);
+
+    res.json({
+      ok: true,
+      paymentUrl: confirmationUrl,
+      yookassaEnabled: isYookassaConfigured(),
+    });
+  } catch (e) {
+    console.error("[admin/price]", e);
     res.status(500).json({ error: "Failed to set price" });
   }
 });
