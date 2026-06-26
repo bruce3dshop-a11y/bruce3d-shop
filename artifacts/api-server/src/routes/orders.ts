@@ -7,6 +7,7 @@ import { sendTelegram, sendTelegramWithKeyboard } from "../lib/telegram";
 import { adminChatId } from "../lib/adminState";
 import { getGroupChatId } from "../lib/configStore";
 import { uploadBuffer, isStorageConfigured } from "../lib/storage";
+import { getPayment, isYookassaConfigured } from "../lib/yookassa";
 import multer from "multer";
 
 const upload = multer({
@@ -86,7 +87,6 @@ router.post("/", upload.array("files", 10), async (req, res) => {
 
     const orderNumber = generateOrderNumber();
     const uploadedFiles = (req.files as Express.Multer.File[]) || [];
-
     const fileUrls: { url: string; originalName: string }[] = [];
 
     if (uploadedFiles.length > 0 && isStorageConfigured()) {
@@ -172,7 +172,25 @@ router.get("/:id", async (req, res) => {
       .where(eq(orderStatusHistoryTable.order_id, order.id))
       .orderBy(orderStatusHistoryTable.created_at);
 
-    res.json({ order, history, messages: [] });
+    let paymentUrl: string | null = null;
+    let paymentPaid = false;
+
+    if (order.payment_link?.startsWith("yookassa:") && isYookassaConfigured()) {
+      const paymentId = order.payment_link.replace("yookassa:", "");
+      try {
+        const payment = await getPayment(paymentId);
+        paymentPaid = payment.paid;
+        if (!payment.paid && payment.status !== "canceled") {
+          paymentUrl = payment.confirmation?.confirmation_url || null;
+        }
+      } catch (e) {
+        console.error("[orders/:id] getPayment error", e);
+      }
+    } else if (order.payment_link && !order.payment_link.startsWith("yookassa:")) {
+      paymentUrl = order.payment_link;
+    }
+
+    res.json({ order: { ...order, payment_link: paymentUrl }, paymentPaid, history, messages: [] });
   } catch {
     res.status(500).json({ error: "Failed to get order" });
   }
@@ -210,8 +228,28 @@ router.post("/:id/confirm", async (req, res) => {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order || order.user_id !== user.id) return res.status(403).json({ error: "Forbidden" });
 
+    if (!order.price) {
+      return res.status(400).json({ error: "Счёт ещё не выставлен" });
+    }
+
+    if (order.payment_link?.startsWith("yookassa:") && isYookassaConfigured()) {
+      const paymentId = order.payment_link.replace("yookassa:", "");
+      const payment = await getPayment(paymentId);
+      if (!payment.paid || payment.status !== "succeeded") {
+        return res.status(402).json({
+          error: "Заказ не может быть подтверждён до оплаты",
+          paymentRequired: true,
+          paymentUrl: payment.confirmation?.confirmation_url || null,
+        });
+      }
+    }
+
     await db.update(ordersTable).set({ status: "confirmed" }).where(eq(ordersTable.id, orderId));
-    await db.insert(orderStatusHistoryTable).values({ order_id: orderId, status: "confirmed", comment: "Клиент подтвердил заказ" });
+    await db.insert(orderStatusHistoryTable).values({
+      order_id: orderId,
+      status: "confirmed",
+      comment: "Клиент подтвердил заказ",
+    });
 
     res.json({ ok: true });
   } catch {
