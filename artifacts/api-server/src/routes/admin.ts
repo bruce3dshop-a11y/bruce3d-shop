@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, orderStatusHistoryTable, usersTable, reviewsTable, galleryItemsTable, productsTable } from "@workspace/db/schema";
-import { eq, sql, sum, desc } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { isAdminSession } from "../lib/session";
 import { sendTelegram } from "../lib/telegram";
 import { getConfig, updateConfig } from "../lib/configStore";
@@ -44,14 +44,14 @@ router.get("/stats", requireAdmin, async (_req, res) => {
     }).from(ordersTable).groupBy(ordersTable.status);
 
     const [totalUsersRow] = await db.select({ count: sql<number>`count(*)` }).from(usersTable);
-    const [revenueRow] = await db.select({ total: sum(ordersTable.price) }).from(ordersTable)
-      .where(eq(ordersTable.status, "confirmed"));
 
-    // orders last 30 days
+    const [revenueRow] = await db.select({
+      total: sql<string>`COALESCE(SUM(price::numeric), 0)`,
+    }).from(ordersTable).where(eq(ordersTable.status, "confirmed"));
+
     const last30 = await db.select({ count: sql<number>`count(*)` }).from(ordersTable)
       .where(sql`created_at > now() - interval '30 days'`);
 
-    // popular services
     const popularServices = await db.select({
       service: ordersTable.service_type,
       count: sql<number>`count(*)`.as("count"),
@@ -64,7 +64,8 @@ router.get("/stats", requireAdmin, async (_req, res) => {
       ordersLast30Days: last30[0]?.count || 0,
       popularServices,
     });
-  } catch {
+  } catch (e) {
+    console.error("[admin/stats]", e);
     res.status(500).json({ error: "Failed to get stats" });
   }
 });
@@ -239,7 +240,7 @@ router.delete("/products/:id", requireAdmin, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== BOT CONFIG (group chat) =====
+// ===== BOT CONFIG =====
 router.get("/bot-config", requireAdmin, (_req, res) => {
   try {
     const cfg = getConfig();
