@@ -150,7 +150,12 @@ router.get("/my", async (req, res) => {
     const orders = await db.select().from(ordersTable)
       .where(eq(ordersTable.user_id, user.id))
       .orderBy(ordersTable.created_at);
-    res.json({ orders: orders.reverse() });
+    // Очищаем yookassa: префикс — фронтенд не должен видеть его как URL
+    const cleaned = orders.reverse().map(o => ({
+      ...o,
+      payment_link: o.payment_link?.startsWith("yookassa:") ? null : o.payment_link,
+    }));
+    res.json({ orders: cleaned });
   } catch {
     res.status(500).json({ error: "Failed to get orders" });
   }
