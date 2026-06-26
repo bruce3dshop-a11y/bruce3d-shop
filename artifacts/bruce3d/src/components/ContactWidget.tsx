@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, MessageCircle } from "lucide-react";
 import { useState } from "react";
 
+const TELEGRAM_URL = "https://t.me/BRUCE_3D_SHOP_BOT";
+
 export default function ContactWidget() {
   const [open, setOpen] = useState(false);
 
@@ -19,7 +21,7 @@ export default function ContactWidget() {
               Напишите нам — ответим быстро!
             </div>
             <a
-              href="https://t.me/BRUCE_3D"
+              href={TELEGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-semibold shadow-lg bg-[#229ED9] hover:bg-[#1a8bbf] transition-all"
