@@ -17,6 +17,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use("/auth", authRouter);
 router.use("/orders", ordersRouter);
+router.use("/order", ordersRouter);
 router.use("/admin", adminRouter);
 router.use("/webhook", webhookRouter);
 router.use("/chat", chatRouter);
