@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, orderStatusHistoryTable, usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { getSessionUser, isAdminSession } from "../lib/session";
 import { sendTelegram, sendTelegramWithKeyboard } from "../lib/telegram";
 import { adminChatId } from "../lib/adminState";
 import { getGroupChatId } from "../lib/configStore";
 import { uploadBuffer, isStorageConfigured } from "../lib/storage";
 import { getPayment, isYookassaConfigured } from "../lib/yookassa";
+import { randomBytes } from "crypto";
 import multer from "multer";
 
 const upload = multer({
@@ -25,7 +26,7 @@ const serviceLabels: Record<string, string> = {
 };
 
 function generateOrderNumber() {
-  return `B3D${Date.now().toString().slice(-6)}`;
+  return `B3D${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
 async function notifyTelegramNewOrder(
@@ -85,7 +86,6 @@ router.post("/", upload.array("files", 10), async (req, res) => {
       userId = user.id;
     }
 
-    const orderNumber = generateOrderNumber();
     const uploadedFiles = (req.files as Express.Multer.File[]) || [];
     const fileUrls: { url: string; originalName: string }[] = [];
 
@@ -106,8 +106,18 @@ router.post("/", upload.array("files", 10), async (req, res) => {
       ? JSON.stringify(uploadedFiles.map(f => f.originalname))
       : null;
 
+    let orderNumber: string;
+    let attempts = 0;
+    while (true) {
+      orderNumber = generateOrderNumber();
+      const [existing] = await db.select({ id: ordersTable.id }).from(ordersTable)
+        .where(eq(ordersTable.order_number, orderNumber)).limit(1);
+      if (!existing) break;
+      if (++attempts > 10) throw new Error("Failed to generate unique order number");
+    }
+
     const [order] = await db.insert(ordersTable).values({
-      order_number: orderNumber,
+      order_number: orderNumber!,
       user_id: userId,
       name, email, phone, telegram,
       service_type: serviceType,
@@ -149,9 +159,8 @@ router.get("/my", async (req, res) => {
     if (!user) return res.json({ orders: [] });
     const orders = await db.select().from(ordersTable)
       .where(eq(ordersTable.user_id, user.id))
-      .orderBy(ordersTable.created_at);
-    // Очищаем yookassa: префикс — фронтенд не должен видеть его как URL
-    const cleaned = orders.reverse().map(o => ({
+      .orderBy(desc(ordersTable.created_at));
+    const cleaned = orders.map(o => ({
       ...o,
       payment_link: o.payment_link?.startsWith("yookassa:") ? null : o.payment_link,
     }));
