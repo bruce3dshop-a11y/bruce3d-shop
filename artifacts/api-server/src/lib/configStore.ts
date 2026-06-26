@@ -1,8 +1,3 @@
-import fs from "fs";
-import path from "path";
-
-const CONFIG_PATH = path.join(process.cwd(), "data", "bot-config.json");
-
 interface BotConfig {
   botToken: string;
   adminChatId: string;
@@ -10,49 +5,12 @@ interface BotConfig {
   groupChatId: string;
 }
 
-const DEFAULT_CONFIG: BotConfig = {
-  botToken: "",
-  adminChatId: "",
-  webhookDomain: "",
-  groupChatId: "",
+let _config: BotConfig = {
+  botToken: process.env.TELEGRAM_BOT_TOKEN || "",
+  adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || "",
+  webhookDomain: process.env.WEBHOOK_DOMAIN || "",
+  groupChatId: process.env.TELEGRAM_GROUP_CHAT_ID || "",
 };
-
-function loadConfig(): BotConfig {
-  try {
-    fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-    if (!fs.existsSync(CONFIG_PATH)) {
-      saveConfig(DEFAULT_CONFIG);
-      return { ...DEFAULT_CONFIG };
-    }
-    const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-  } catch (e) {
-    console.error("[configStore] Failed to load config:", e);
-    return { ...DEFAULT_CONFIG };
-  }
-}
-
-function saveConfig(config: BotConfig) {
-  try {
-    fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
-  } catch (e) {
-    console.error("[configStore] Failed to save config:", e);
-  }
-}
-
-// Load once at startup, then keep in memory
-let _config: BotConfig = loadConfig();
-
-// If token is missing from file but present in env — seed it into the file
-if (!_config.botToken && process.env.TELEGRAM_BOT_TOKEN) {
-  _config.botToken = process.env.TELEGRAM_BOT_TOKEN;
-  saveConfig(_config);
-}
-if (!_config.adminChatId && process.env.TELEGRAM_ADMIN_CHAT_ID) {
-  _config.adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
-  saveConfig(_config);
-}
 
 export function getConfig(): BotConfig {
   return { ..._config };
@@ -63,23 +21,21 @@ export function getBotToken(): string {
 }
 
 export function getAdminChatId(): string {
-  return _config.adminChatId || "";
+  return _config.adminChatId || process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 }
 
 export function getWebhookDomain(): string {
-  return _config.webhookDomain || "";
+  return _config.webhookDomain || process.env.WEBHOOK_DOMAIN || "";
 }
 
 export function getGroupChatId(): string {
-  return _config.groupChatId || "";
+  return _config.groupChatId || process.env.TELEGRAM_GROUP_CHAT_ID || "";
 }
 
 export function updateConfig(partial: Partial<BotConfig>) {
   _config = { ..._config, ...partial };
-  saveConfig(_config);
 }
 
 export function setAdminChatIdInConfig(chatId: string) {
   _config.adminChatId = chatId;
-  saveConfig(_config);
 }
