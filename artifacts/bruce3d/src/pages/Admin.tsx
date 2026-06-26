@@ -79,7 +79,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
         <div className="rounded-3xl border border-border/40 bg-card/60 backdrop-blur-xl p-8 shadow-2xl shadow-black/50">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/10">
-              <Shield className="w-8 h-8 text-yellow-400" />
+              <img src="/logo.png" alt="BRUCE 3D" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-2xl font-black font-display">Панель <span className="text-primary">администратора</span></h1>
             <p className="text-sm text-muted-foreground mt-1">BRUCE 3D SHOP</p>
