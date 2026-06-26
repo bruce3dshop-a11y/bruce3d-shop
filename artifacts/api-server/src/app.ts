@@ -24,23 +24,17 @@ app.use(
 const rawFrontendUrl = process.env.FRONTEND_URL;
 const allowedOrigin = rawFrontendUrl ? rawFrontendUrl.replace(/\/$/, "") : true;
 app.use(cors({ origin: allowedOrigin, credentials: true }));
-app.use(cookieParser());
+
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  logger.warn("SESSION_SECRET is not set — cookies will not be signed. Set SESSION_SECRET in Railway.");
+}
+app.use(cookieParser(SESSION_SECRET || "default-unsigned"));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded order files (accessible to admin)
 app.use("/uploads", express.static(UPLOAD_DIR));
-
-// Temporary download endpoint for project archive
-app.get("/download/bruce3d-shop-COMPLETE.tar", (req, res) => {
-  const filePath = path.resolve(process.cwd(), "../../bruce3d-shop-COMPLETE.tar");
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Archive not found" });
-  }
-  res.setHeader("Content-Disposition", 'attachment; filename="bruce3d-shop-COMPLETE.tar"');
-  res.setHeader("Content-Type", "application/x-tar");
-  res.sendFile(filePath);
-});
 
 app.use("/api", router);
 
