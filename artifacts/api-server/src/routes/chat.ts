@@ -38,6 +38,13 @@ router.post("/:orderId/send", async (req: Request, res: Response) => {
     const { message } = req.body;
     if (!message?.trim()) return res.status(400).json({ error: "Message required" });
 
+    if (!isAdmin && user) {
+      const [order] = await db.select({ user_id: ordersTable.user_id })
+        .from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      if (order.user_id !== user.id) return res.status(403).json({ error: "Forbidden" });
+    }
+
     const [msg] = await db.insert(orderMessagesTable).values({
       order_id: orderId,
       sender: isAdmin ? "admin" : "client",
