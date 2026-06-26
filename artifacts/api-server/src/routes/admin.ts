@@ -321,4 +321,108 @@ router.post("/broadcast", requireAdmin, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== GALLERY URL MIGRATION =====
+// Fixes existing gallery items with expired Telegram URLs — re-uploads to Cloudinary
+router.post("/gallery/fix-urls", requireAdmin, async (_req, res) => {
+  try {
+    const { getTelegramFileUrl } = await import("../lib/telegram");
+    const { uploadBuffer, isStorageConfigured } = await import("../lib/storage");
+
+    if (!isStorageConfigured()) {
+      return res.status(400).json({
+        error: "Cloudinary не настроен. Добавьте CLOUDINARY_URL в переменные окружения Railway.",
+      });
+    }
+
+    const allItems = await db.select().from(galleryItemsTable);
+    const broken = allItems.filter(item => item.image_url?.includes("api.telegram.org"));
+
+    if (broken.length === 0) {
+      return res.json({ ok: true, fixed: 0, message: "Все фото уже имеют постоянные URL" });
+    }
+
+    const results: { id: number; title: string; status: string }[] = [];
+
+    for (const item of broken) {
+      try {
+        if (!item.telegram_file_id) {
+          results.push({ id: item.id, title: item.title || "", status: "skip — нет file_id" });
+          continue;
+        }
+
+        const freshUrl = await getTelegramFileUrl(item.telegram_file_id);
+        if (!freshUrl) {
+          results.push({ id: item.id, title: item.title || "", status: "error — Telegram file not accessible" });
+          continue;
+        }
+
+        const response = await fetch(freshUrl);
+        if (!response.ok) {
+          results.push({ id: item.id, title: item.title || "", status: `error — download failed (${response.status})` });
+          continue;
+        }
+
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const cloudUrl = await uploadBuffer(buffer, `gallery-${item.telegram_file_id}.jpg`, "image/jpeg", "gallery");
+
+        await db.update(galleryItemsTable).set({ image_url: cloudUrl }).where(eq(galleryItemsTable.id, item.id));
+
+        results.push({ id: item.id, title: item.title || "", status: "ok" });
+        await new Promise(r => setTimeout(r, 300));
+      } catch (e: any) {
+        results.push({ id: item.id, title: item.title || "", status: `error — ${e.message}` });
+      }
+    }
+
+    const fixed = results.filter(r => r.status === "ok").length;
+    res.json({ ok: true, total: broken.length, fixed, failed: broken.length - fixed, results });
+  } catch (e: any) {
+    console.error("[admin/gallery/fix-urls]", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Fix products that already have expired Telegram image URLs
+router.post("/products/fix-image-urls", requireAdmin, async (_req, res) => {
+  try {
+    const { uploadBuffer, isStorageConfigured } = await import("../lib/storage");
+
+    if (!isStorageConfigured()) {
+      return res.status(400).json({ error: "Cloudinary не настроен" });
+    }
+
+    const allProducts = await db.select().from(productsTable);
+    const broken = allProducts.filter(p => p.image_url?.includes("api.telegram.org"));
+
+    if (broken.length === 0) {
+      return res.json({ ok: true, fixed: 0, message: "Все товары уже имеют рабочие изображения" });
+    }
+
+    const results: { id: number; title: string; status: string }[] = [];
+
+    for (const product of broken) {
+      try {
+        const response = await fetch(product.image_url!);
+        if (!response.ok) {
+          results.push({ id: product.id, title: product.title, status: `error — image expired (${response.status})` });
+          continue;
+        }
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const cloudUrl = await uploadBuffer(buffer, `product-${product.id}.jpg`, "image/jpeg", "products");
+        await db.update(productsTable).set({ image_url: cloudUrl }).where(eq(productsTable.id, product.id));
+        results.push({ id: product.id, title: product.title, status: "ok" });
+        await new Promise(r => setTimeout(r, 300));
+      } catch (e: any) {
+        results.push({ id: product.id, title: product.title, status: `error — ${e.message}` });
+      }
+    }
+
+    const fixed = results.filter(r => r.status === "ok").length;
+    res.json({ ok: true, total: broken.length, fixed, results });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
+
