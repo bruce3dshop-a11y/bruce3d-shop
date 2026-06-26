@@ -6,7 +6,6 @@ import { getSessionUser, setSessionUser, clearSessionUser, setAdminSession, isAd
 import bcrypt from "bcryptjs";
 
 const router = Router();
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "bruce3d_admin_2024";
 
 router.get("/me", async (req, res) => {
   try {
@@ -64,6 +63,10 @@ router.post("/login", async (req, res) => {
 
 router.post("/admin-login", async (req, res) => {
   try {
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({ error: "Переменная ADMIN_PASSWORD не задана на сервере. Установите её в Railway." });
+    }
     const { password } = req.body;
     if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Неверный пароль" });
     setAdminSession(res);
