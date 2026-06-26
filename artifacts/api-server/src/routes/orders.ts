@@ -3,43 +3,38 @@ import { db } from "@workspace/db";
 import { ordersTable, orderStatusHistoryTable, usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { getSessionUser, isAdminSession } from "../lib/session";
-import { sendTelegram, sendTelegramWithKeyboard, sendTelegramDocument, sendTelegramPhoto } from "../lib/telegram";
+import { sendTelegram, sendTelegramWithKeyboard } from "../lib/telegram";
 import { adminChatId } from "../lib/adminState";
 import { getGroupChatId } from "../lib/configStore";
+import { uploadBuffer, isStorageConfigured } from "../lib/storage";
 import multer from "multer";
-import fs from "fs";
-import path from "path";
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
-  },
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
 const router = Router();
 
 const serviceLabels: Record<string, string> = {
-  "3d-print": "3D Печать", "3d-modeling": "Моделирование",
-  "3d-scanning": "Сканирование", "repair": "Ремонт",
+  "3d-print": "3D Печать",
+  "3d-modeling": "Моделирование",
+  "3d-scanning": "Сканирование",
+  "repair": "Ремонт",
 };
 
 function generateOrderNumber() {
   return `B3D${Date.now().toString().slice(-6)}`;
 }
 
-const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"]);
-
-async function notifyTelegramNewOrder(order: {
-  id: number; order_number: string; name: string; phone?: string | null;
-  telegram?: string | null; email?: string | null;
-  service_type: string; material: string; description: string; delivery_type?: string | null;
-}, files?: { path: string; originalName: string; filename: string }[]) {
+async function notifyTelegramNewOrder(
+  order: {
+    id: number; order_number: string; name: string; phone?: string | null;
+    telegram?: string | null; email?: string | null;
+    service_type: string; material: string; description: string; delivery_type?: string | null;
+  },
+  fileUrls?: { url: string; originalName: string }[]
+) {
   const chatId = adminChatId;
   if (!chatId) return;
 
@@ -50,11 +45,11 @@ async function notifyTelegramNewOrder(order: {
     order.email && `✉️ ${order.email}`,
   ].filter(Boolean).join("\n");
 
-  const fileCount = files?.length || 0;
+  const fileCount = fileUrls?.length || 0;
   const fileNote = fileCount === 1
-    ? `\n📎 Файл: <code>${files![0].originalName}</code>`
+    ? `\n📎 Файл: <a href="${fileUrls![0].url}">${fileUrls![0].originalName}</a>`
     : fileCount > 1
-    ? `\n📎 Файлов: ${fileCount} (${files!.map(f => f.originalName).join(", ")})`
+    ? `\n📎 Файлов: ${fileCount}\n${fileUrls!.map(f => `• <a href="${f.url}">${f.originalName}</a>`).join("\n")}`
     : "";
 
   const text = `🆕 <b>Новый заказ #${order.order_number}</b>\n\n👤 <b>${order.name}</b>\n${contact}\n\n🔧 Услуга: ${service}\n🧱 Материал: ${order.material.toUpperCase()}\n📦 Доставка: ${order.delivery_type || "самовывоз"}${fileNote}\n\n📝 ${order.description.slice(0, 280)}${order.description.length > 280 ? "..." : ""}`;
@@ -70,19 +65,6 @@ async function notifyTelegramNewOrder(order: {
   };
 
   await sendTelegramWithKeyboard(chatId, text, keyboard);
-
-  if (files && files.length > 0) {
-    for (const file of files) {
-      if (!fs.existsSync(file.path)) continue;
-      const ext = path.extname(file.originalName).toLowerCase();
-      const caption = `📎 <b>Файл заказа #${order.order_number}</b>\n👤 ${order.name}\n<code>${file.originalName}</code>`;
-      if (IMAGE_EXTS.has(ext)) {
-        await sendTelegramPhoto(chatId, file.path, caption);
-      } else {
-        await sendTelegramDocument(chatId, file.path, caption);
-      }
-    }
-  }
 }
 
 router.post("/", upload.array("files", 10), async (req, res) => {
@@ -105,8 +87,23 @@ router.post("/", upload.array("files", 10), async (req, res) => {
     const orderNumber = generateOrderNumber();
     const uploadedFiles = (req.files as Express.Multer.File[]) || [];
 
-    const fileNamesJson = uploadedFiles.length > 0
-      ? JSON.stringify(uploadedFiles.map(f => f.filename))
+    const fileUrls: { url: string; originalName: string }[] = [];
+
+    if (uploadedFiles.length > 0 && isStorageConfigured()) {
+      for (const file of uploadedFiles) {
+        try {
+          const url = await uploadBuffer(file.buffer, file.originalname, file.mimetype, "orders");
+          fileUrls.push({ url, originalName: file.originalname });
+        } catch (e) {
+          console.error("[order upload]", e);
+        }
+      }
+    }
+
+    const fileNamesJson = fileUrls.length > 0
+      ? JSON.stringify(fileUrls.map(f => f.url))
+      : uploadedFiles.length > 0
+      ? JSON.stringify(uploadedFiles.map(f => f.originalname))
       : null;
 
     const [order] = await db.insert(ordersTable).values({
@@ -116,7 +113,7 @@ router.post("/", upload.array("files", 10), async (req, res) => {
       service_type: serviceType,
       material,
       description,
-      file_name: fileNamesJson || uploadedFiles[0]?.filename || null,
+      file_name: fileNamesJson || uploadedFiles[0]?.originalname || null,
       delivery_type: deliveryType || "pickup",
       delivery_city: deliveryCity,
       delivery_address: deliveryAddress,
@@ -130,14 +127,8 @@ router.post("/", upload.array("files", 10), async (req, res) => {
       comment: "Заказ создан",
     });
 
-    const telegramFiles = uploadedFiles.map(f => ({
-      path: path.join(UPLOAD_DIR, f.filename),
-      originalName: f.originalname,
-      filename: f.filename,
-    }));
-    notifyTelegramNewOrder(order, telegramFiles).catch(console.error);
+    notifyTelegramNewOrder(order, fileUrls).catch(console.error);
 
-    // Notify Telegram group (info-only, no keyboard)
     const groupId = getGroupChatId();
     if (groupId) {
       const service = serviceLabels[order.service_type] || order.service_type;
@@ -228,5 +219,4 @@ router.post("/:id/confirm", async (req, res) => {
   }
 });
 
-export { UPLOAD_DIR };
 export default router;
