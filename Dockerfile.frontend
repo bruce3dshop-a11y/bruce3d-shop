@@ -11,7 +11,7 @@ FROM nginx:alpine
 COPY --from=builder /app/artifacts/bruce3d/dist/public /usr/share/nginx/html
 
 RUN printf 'server {\n\
-    listen 80;\n\
+    listen ${PORT};\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
     location /api {\n\
@@ -22,7 +22,6 @@ RUN printf 'server {\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
     }\n\
-}\n' > /etc/nginx/conf.d/default.conf
+}\n' > /etc/nginx/conf.d/default.conf.template
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
