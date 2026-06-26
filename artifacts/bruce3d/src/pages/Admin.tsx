@@ -1065,9 +1065,9 @@ export default function Admin() {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between mb-8 p-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/20 flex items-center justify-center shadow-lg shadow-yellow-500/10">
-              <Shield className="w-6 h-6 text-yellow-400" />
-            </div>
+         <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center">
+          <img src="/logo.png" alt="BRUCE 3D" className="w-12 h-12 object-contain" />
+          </div>
             <div>
               <h1 className="text-xl font-black font-display">
                 Панель <span className="text-primary">администратора</span>
