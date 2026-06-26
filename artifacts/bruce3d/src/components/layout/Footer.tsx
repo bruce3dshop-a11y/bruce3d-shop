@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { Shield, Send, Search, ShoppingBag } from "lucide-react";
 
+const TELEGRAM_URL = "https://t.me/BRUCE_3D_SHOP_BOT";
+
 export function Footer() {
   return (
     <footer className="border-t border-border/40 bg-background py-10">
@@ -47,7 +49,7 @@ export function Footer() {
             <h4 className="font-semibold text-sm mb-3 text-foreground">Контакты</h4>
             <div className="flex flex-col gap-2">
               <a
-                href="https://t.me/bruce3dshop"
+                href={TELEGRAM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
