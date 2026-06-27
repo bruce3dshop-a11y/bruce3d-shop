@@ -1,4 +1,7 @@
 import { Router } from "express";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { db } from "@workspace/db";
 import { ordersTable, orderStatusHistoryTable, usersTable, reviewsTable, galleryItemsTable, productsTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
@@ -7,6 +10,8 @@ import { sendTelegram } from "../lib/telegram";
 import { getConfig, updateConfig } from "../lib/configStore";
 import { createPayment, isYookassaConfigured } from "../lib/yookassa";
 import { broadcastOrderUpdate } from "./chat";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -262,6 +267,37 @@ router.delete("/gallery/:id", requireAdmin, async (req, res) => {
   } catch {
     res.status(500).json({ error: "Failed to delete gallery item" });
   }
+});
+
+router.post("/gallery/upload", requireAdmin, (req, res) => {
+  upload.single("image")(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) return res.status(400).json({ error: "Файл не получен" });
+    try {
+      const { uploadBuffer, isStorageConfigured } = await import("../lib/storage");
+      let imageUrl: string;
+      if (isStorageConfigured()) {
+        imageUrl = await uploadBuffer(file.buffer, file.originalname, file.mimetype, "gallery");
+      } else {
+        const ext = path.extname(file.originalname) || ".jpg";
+        const filename = `gallery-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+        const uploadDir = path.join(process.cwd(), "uploads");
+        fs.mkdirSync(uploadDir, { recursive: true });
+        fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
+        const proto = req.headers["x-forwarded-proto"] || req.protocol;
+        const host = req.headers["x-forwarded-host"] || req.get("host");
+        imageUrl = `${proto}://${host}/uploads/${filename}`;
+      }
+      const title = (req.body?.title as string) || null;
+      const category = (req.body?.category as string) || null;
+      const [item] = await db.insert(galleryItemsTable).values({ image_url: imageUrl, title, category }).returning();
+      res.json({ ok: true, item });
+    } catch (e: any) {
+      console.error("[admin/gallery/upload]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 // ===== PRODUCTS =====
