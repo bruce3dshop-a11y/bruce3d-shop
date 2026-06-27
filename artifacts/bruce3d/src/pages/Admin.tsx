@@ -371,6 +371,8 @@ function GalleryTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [fixResult, setFixResult] = useState<{ fixed: number; total: number; failed: number } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data } = useQuery({
     queryKey: ["admin-gallery"],
     queryFn: () => apiFetch<{ items: GalleryItem[] }>("admin/gallery"),
@@ -394,23 +396,75 @@ function GalleryTab() {
       toast({ title: "Ошибка", description: e.message, variant: "destructive" });
     },
   });
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    let uploaded = 0;
+    for (const file of Array.from(files)) {
+      try {
+        const form = new FormData();
+        form.append("image", file);
+        const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+        const resp = await fetch(`${base}/api/admin/gallery/upload`, { method: "POST", body: form, credentials: "include" });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: "Ошибка" }));
+          throw new Error(err.error || "Ошибка загрузки");
+        }
+        uploaded++;
+      } catch (err: any) {
+        toast({ title: `Ошибка: ${file.name}`, description: err.message, variant: "destructive" });
+      }
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (uploaded > 0) {
+      toast({ title: `✅ Загружено ${uploaded} фото` });
+      queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+    }
+  };
+
   return (
     <div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleUpload}
+      />
       <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-xl border border-primary/15 bg-primary/5">
-        <div className="flex items-center gap-2 flex-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <ImageIcon className="w-4 h-4 text-primary shrink-0" />
-          <p className="text-sm text-muted-foreground">Для добавления фото — отправьте изображение <span className="text-primary font-medium">боту в Telegram</span> с любой подписью.</p>
+          <p className="text-sm text-muted-foreground truncate">Загрузите фото напрямую или через <span className="text-primary font-medium">Telegram-бот</span></p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-xl h-8 px-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 shrink-0"
-          onClick={() => fixUrlsMutation.mutate()}
-          disabled={fixUrlsMutation.isPending}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${fixUrlsMutation.isPending ? "animate-spin" : ""}`} />
-          {fixUrlsMutation.isPending ? "Исправляем..." : "Исправить ссылки галереи"}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl h-8 px-3 border-primary/30 text-primary hover:bg-primary/10"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <><div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin mr-1.5" />Загрузка...</>
+            ) : (
+              <><Upload className="w-3.5 h-3.5 mr-1.5" />Загрузить фото</>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl h-8 px-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+            onClick={() => fixUrlsMutation.mutate()}
+            disabled={fixUrlsMutation.isPending}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${fixUrlsMutation.isPending ? "animate-spin" : ""}`} />
+            {fixUrlsMutation.isPending ? "Исправляем..." : "Исправить ссылки"}
+          </Button>
+        </div>
       </div>
       {fixResult && (
         <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-sm">
