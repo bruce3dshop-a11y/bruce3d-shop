@@ -89,7 +89,13 @@ router.post("/:sessionKey/send", async (req: Request, res: Response) => {
 
     if (!session) return res.status(404).json({ error: "Session not found" });
 
-    const sender = isAdmin ? "admin" : "client";
+    // Prevent clients from sending to a closed session (admins can still reply)
+    const isAdminRequest = isAdminSession(req);
+    if (session.status === "closed" && !isAdminRequest) {
+      return res.status(403).json({ error: "Session is closed" });
+    }
+
+    const sender = isAdminRequest ? "admin" : "client";
 
     const [msg] = await db.insert(supportMessagesTable).values({
       session_id: session.id,
