@@ -115,6 +115,25 @@ export default function SupportChat() {
     startSession(name);
   }, [visitorName, startSession]);
 
+  // Start a brand new chat after admin closes the session
+  const startNewChat = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    if (esRef.current) { esRef.current.close(); esRef.current = null; }
+    setSession(null);
+    setMessages([]);
+    setClosed(false);
+    setInput("");
+    setVisitorName("");
+    const existingKey = localStorage.getItem(STORAGE_KEY);
+    if (user) {
+      startSession(user.name);
+    } else if (existingKey) {
+      startSession();
+    } else {
+      setNameAsked(true);
+    }
+  }, [user, startSession]);
+
   // Send message
   const sendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,8 +250,14 @@ export default function SupportChat() {
                   </div>
                 ))}
                 {closed && (
-                  <div className="text-center py-2">
+                  <div className="text-center py-3 flex flex-col items-center gap-2">
                     <span className="text-[10px] text-white/30 bg-white/5 px-3 py-1 rounded-full">Чат закрыт оператором</span>
+                    <button
+                      onClick={startNewChat}
+                      className="text-xs text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+                    >
+                      Начать новый чат
+                    </button>
                   </div>
                 )}
                 <div ref={bottomRef} />
@@ -256,6 +281,16 @@ export default function SupportChat() {
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               </form>
+            )}
+            {!nameAsked && !loading && closed && (
+              <div className="p-3 border-t border-white/8">
+                <button
+                  onClick={startNewChat}
+                  className="w-full py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" /> Начать новый чат
+                </button>
+              </div>
             )}
           </motion.div>
         )}
