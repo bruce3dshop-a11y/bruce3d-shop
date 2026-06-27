@@ -370,6 +370,7 @@ function ReviewsTab() {
 function GalleryTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [fixResult, setFixResult] = useState<{ fixed: number; total: number; failed: number } | null>(null);
   const { data } = useQuery({
     queryKey: ["admin-gallery"],
     queryFn: () => apiFetch<{ items: GalleryItem[] }>("admin/gallery"),
@@ -378,12 +379,45 @@ function GalleryTab() {
     mutationFn: (id: number) => apiFetch(`admin/gallery/${id}`, { method: "DELETE" }),
     onSuccess: () => { toast({ title: "Удалено" }); queryClient.invalidateQueries({ queryKey: ["admin-gallery"] }); },
   });
+  const fixUrlsMutation = useMutation({
+    mutationFn: () => apiFetch<{ ok: boolean; fixed: number; total: number; failed: number; message?: string }>("admin/gallery/fix-urls", { method: "POST" }),
+    onSuccess: (result) => {
+      if (result.message) {
+        toast({ title: result.message });
+      } else {
+        setFixResult({ fixed: result.fixed, total: result.total, failed: result.failed });
+        toast({ title: `✅ Исправлено ${result.fixed} из ${result.total} фото` });
+        queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      }
+    },
+    onError: (e: any) => {
+      toast({ title: "Ошибка", description: e.message, variant: "destructive" });
+    },
+  });
   return (
     <div>
-      <div className="flex items-center gap-2 p-3 mb-4 rounded-xl border border-primary/15 bg-primary/5">
-        <ImageIcon className="w-4 h-4 text-primary shrink-0" />
-        <p className="text-sm text-muted-foreground">Для добавления фото — отправьте изображение <span className="text-primary font-medium">боту в Telegram</span> с любой подписью.</p>
+      <div className="flex items-center justify-between gap-2 p-3 mb-4 rounded-xl border border-primary/15 bg-primary/5">
+        <div className="flex items-center gap-2 flex-1">
+          <ImageIcon className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-sm text-muted-foreground">Для добавления фото — отправьте изображение <span className="text-primary font-medium">боту в Telegram</span> с любой подписью.</p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-xl h-8 px-3 border-amber-500/30 text-amber-400 hover:bg-amber-500/10 shrink-0"
+          onClick={() => fixUrlsMutation.mutate()}
+          disabled={fixUrlsMutation.isPending}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${fixUrlsMutation.isPending ? "animate-spin" : ""}`} />
+          {fixUrlsMutation.isPending ? "Исправляем..." : "Исправить ссылки галереи"}
+        </Button>
       </div>
+      {fixResult && (
+        <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-sm">
+          <span className="text-emerald-400 font-semibold">Готово: </span>
+          <span className="text-muted-foreground">исправлено {fixResult.fixed} из {fixResult.total}, ошибок: {fixResult.failed}</span>
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {(data?.items || []).map(item => (
           <div key={item.id} className="group relative rounded-2xl overflow-hidden border border-border/40 aspect-square">
