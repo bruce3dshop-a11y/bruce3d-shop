@@ -5,7 +5,7 @@ import { Router } from "express";
   import { getSessionUser, isAdminSession } from "../lib/session";
   import { sendTelegram } from "../lib/telegram";
   import { adminChatId } from "../lib/adminState";
-  import { getGroupChatId } from "../lib/configStore";
+  import { getConfig, getGroupChatId } from "../lib/configStore";
   import { uploadBuffer, isStorageConfigured } from "../lib/storage";
   import { getPayment, isYookassaConfigured } from "../lib/yookassa";
   import { randomBytes } from "crypto";
@@ -27,6 +27,14 @@ import { Router } from "express";
 
   function generateOrderNumber() {
     return `B3D${randomBytes(3).toString("hex").toUpperCase()}`;
+  }
+
+  function getSiteUrl(): string {
+    return (
+      process.env.FRONTEND_URL?.replace(/\/$/, "") ||
+      (getConfig().webhookDomain ? `https://${getConfig().webhookDomain}` : "") ||
+      ""
+    );
   }
 
   async function notifyTelegramNewOrder(
@@ -60,6 +68,11 @@ import { Router } from "express";
       ? `\n📎 Файлов: ${fileCount}\n${fileUrls!.map(f => `• <a href="${f.url}">${f.originalName}</a>`).join("\n")}`
       : "";
 
+    const siteUrl = getSiteUrl();
+    const adminLink = siteUrl
+      ? `\n\n🖥 <a href="${siteUrl}/admin">Открыть панель → Заказ #${order.order_number}</a>`
+      : "";
+
     const text = `🆕 <b>Новый заказ #${order.order_number}</b>
 
   👤 <b>${order.name}</b>
@@ -69,7 +82,7 @@ import { Router } from "express";
   🧱 Материал: ${order.material.toUpperCase()}
   📦 Доставка: ${delivery}${fileNote}
 
-  📝 ${order.description.slice(0, 500)}${order.description.length > 500 ? "..." : ""}`;
+  📝 ${order.description.slice(0, 500)}${order.description.length > 500 ? "..." : ""}${adminLink}`;
 
     await sendTelegram(chatId, text);
   }
