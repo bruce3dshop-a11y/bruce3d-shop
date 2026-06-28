@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
@@ -23,6 +24,7 @@ app.use(
 );
 const rawFrontendUrl = process.env.FRONTEND_URL;
 const allowedOrigin = rawFrontendUrl ? rawFrontendUrl.replace(/\/$/, "") : true;
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
