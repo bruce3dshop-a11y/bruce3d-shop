@@ -82,6 +82,10 @@ router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
   try {
     const { status, comment } = req.body;
     const orderId = Number(req.params.id);
+    const VALID_STATUSES = ["new","calculating","accepted","working","printing","postprocess","ready","shipped","completed","rejected","confirmed"];
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: "Invalid status value" });
+    }
     await db.update(ordersTable).set({ status, updated_at: new Date() }).where(eq(ordersTable.id, orderId));
     await db.insert(orderStatusHistoryTable).values({ order_id: orderId, status, comment });
 
