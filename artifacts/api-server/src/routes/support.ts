@@ -117,8 +117,8 @@ router.post("/:sessionKey/send", async (req: Request, res: Response) => {
     if (sender === "client") {
       const adminId = getAdminChatId();
       if (adminId) {
-        const msgCount = await db.select().from(supportMessagesTable)
-          .where(eq(supportMessagesTable.session_id, session.id));
+        const msgCount = await db.select({ id: supportMessagesTable.id }).from(supportMessagesTable)
+          .where(eq(supportMessagesTable.session_id, session.id)).limit(2);
         if (msgCount.length === 1) {
           // First message — notify admin
           await sendTelegram(adminId,
