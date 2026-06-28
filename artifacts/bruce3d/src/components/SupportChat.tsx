@@ -73,7 +73,10 @@ export default function SupportChat() {
 
   // SSE connection
   const connectSSE = useCallback((sessionKey: string) => {
-    if (esRef.current) esRef.current.close();
+    if (esRef.current) {
+        (esRef.current as any)._cleanup?.();
+        esRef.current.close();
+      }
     const es = new EventSource(apiUrl(`support/${sessionKey}/stream`), { withCredentials: true });
     esRef.current = es;
     es.onmessage = (e) => {
@@ -90,7 +93,19 @@ export default function SupportChat() {
         }
       } catch {}
     };
-    es.onerror = () => { es.close(); };
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+      es.onerror = () => {
+        es.close();
+        esRef.current = null;
+        // Auto-reconnect after 3 seconds if session is still active
+        reconnectTimer = setTimeout(() => {
+          if (esRef.current === null) {
+            connectSSE(sessionKey);
+          }
+        }, 3000);
+      };
+      const origClose = es.close.bind(es);
+      (es as any)._cleanup = () => { if (reconnectTimer) clearTimeout(reconnectTimer); };
   }, [open, scrollToBottom]);
 
   // When user opens chat for the first time
