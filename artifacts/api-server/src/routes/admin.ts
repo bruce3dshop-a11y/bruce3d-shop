@@ -129,7 +129,7 @@ router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
 
     if (isYookassaConfigured()) {
       try {
-        const frontendUrl = process.env.FRONTEND_URL || "https://bruce3d-shop.ru";
+        const frontendUrl = (process.env.FRONTEND_URL || (getConfig().webhookDomain ? `https://${getConfig().webhookDomain}` : "")).replace(/\/$/, "") || "https://bruce3d-shop.ru";
         const returnUrl = `${frontendUrl.replace(/\/$/, "")}/order/${orderId}`;
         const payment = await createPayment({
           amount: Number(price),
