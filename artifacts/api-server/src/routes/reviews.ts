@@ -1,4 +1,13 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
+
+const reviewRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Слишком много запросов. Попробуйте позже." },
+});
 import { db } from "@workspace/db";
 import { reviewsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -19,13 +28,16 @@ router.get("/", async (_req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", reviewRateLimit, async (req, res) => {
   try {
     const { name, role, rating, text } = req.body;
     if (!name || !text) return res.status(400).json({ error: "name and text required" });
+    if (name.length > 100) return res.status(400).json({ error: "Имя слишком длинное (макс. 100 символов)" });
+    if (text.length > 2000) return res.status(400).json({ error: "Текст слишком длинный (макс. 2000 символов)" });
+    const safeRating = Math.min(5, Math.max(1, Number(rating) || 5));
 
     const [review] = await db.insert(reviewsTable).values({
-      name, role, rating: Number(rating) || 5, text, approved: false,
+      name: name.slice(0, 100), role: role?.slice(0, 100), rating: safeRating, text: text.slice(0, 2000), approved: false,
     }).returning();
 
     const chatId = adminChatId;
