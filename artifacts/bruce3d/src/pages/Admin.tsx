@@ -174,17 +174,58 @@ function OrdersTab() {
                 {selectedOrder?.id === order.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
                     className="mt-4 pt-4 border-t border-border/30 space-y-4" onClick={e => e.stopPropagation()}>
-                    {order.file_name && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
-                        <span className="text-xs text-muted-foreground">📎 Файл:</span>
-                        <a href={`${import.meta.env.BASE_URL ?? "/"}api/uploads/${order.file_name}`}
-                          target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-primary font-medium hover:underline truncate"
-                          onClick={e => e.stopPropagation()}>
-                          {order.file_name}
-                        </a>
-                      </div>
-                    )}
+                    {order.file_name && (() => {
+                      let fileUrls: { url: string; name: string }[] = [];
+                      try {
+                        const parsed = JSON.parse(order.file_name);
+                        if (Array.isArray(parsed)) {
+                          fileUrls = parsed.map((u: string, i: number) => ({
+                            url: u,
+                            name: decodeURIComponent(u.split("/").pop()?.split("?")[0] || `file-${i + 1}`),
+                          }));
+                        } else {
+                          fileUrls = [{ url: order.file_name, name: order.file_name }];
+                        }
+                      } catch {
+                        fileUrls = [{ url: order.file_name, name: order.file_name }];
+                      }
+                      if (fileUrls.length === 0) return null;
+                      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+                      const zipUrl = `${base}/api/admin/orders/${order.id}/files/zip`;
+                      return (
+                        <div className="space-y-1.5 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-xs text-muted-foreground font-medium">
+                              📎 Файлы ({fileUrls.length})
+                            </span>
+                            {fileUrls.length > 0 && (
+                              <a
+                                href={zipUrl}
+                                download
+                                onClick={e => e.stopPropagation()}
+                                className="flex items-center gap-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-0.5 rounded-lg transition-colors font-medium"
+                              >
+                                <Download className="w-3 h-3" /> ZIP
+                              </a>
+                            )}
+                          </div>
+                          {fileUrls.map((f, i) => (
+                            <a
+                              key={i}
+                              href={f.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                              onClick={e => e.stopPropagation()}
+                              className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 font-medium hover:underline"
+                            >
+                              <Download className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                            </a>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <div>
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Изменить статус</p>
                       <div className="flex flex-wrap gap-2">
