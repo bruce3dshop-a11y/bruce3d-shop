@@ -109,6 +109,7 @@ function OrdersTab() {
   const [commentInput, setCommentInput] = useState("");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date_desc"|"date_asc"|"price_desc"|"price_asc">("date_desc");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -138,8 +139,23 @@ function OrdersTab() {
       onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
     });
 
-  const filtered = (ordersData?.orders || []).filter(o =>
-    !search || o.order_number.includes(search) || o.name.toLowerCase().includes(search.toLowerCase()) || o.email?.includes(search)
+  const STATUS_GROUPS: Record<string, string[]> = {
+      new: ["new", "calculating"],
+      active: ["accepted", "working", "printing", "postprocess"],
+      ready: ["ready", "shipped"],
+      done: ["completed", "confirmed", "rejected"],
+    };
+    const filtered = [...(ordersData?.orders || [])]
+      .filter(o => {
+        if (statusFilter !== "all" && !STATUS_GROUPS[statusFilter]?.includes(o.status)) return false;
+        return !search || o.order_number.includes(search) || o.name.toLowerCase().includes(search.toLowerCase()) || o.email?.includes(search);
+      })
+      .sort((a, b) => {
+        if (sortBy === "date_asc") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        if (sortBy === "price_desc") return (Number(b.price) || 0) - (Number(a.price) || 0);
+        if (sortBy === "price_asc") return (Number(a.price) || 0) - (Number(b.price) || 0);
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      })
   );
 
   return (
@@ -157,7 +173,26 @@ function OrdersTab() {
             })}
           </div>
         </div>
-      {isLoading ? (
+      {/* Status filter tabs */}
+        <div className="flex gap-1.5 flex-wrap">
+          {([
+            { key: "all", label: "Все" },
+            { key: "new", label: "🔵 Новые" },
+            { key: "active", label: "🟡 В работе" },
+            { key: "ready", label: "🟣 Готовые" },
+            { key: "done", label: "✅ Завершены" },
+          ] as const).map(({ key, label }) => {
+            const cnt = key === "all" ? (ordersData?.orders||[]).length : (ordersData?.orders||[]).filter(o => STATUS_GROUPS[key]?.includes(o.status)).length;
+            return (
+              <button key={key} onClick={() => setStatusFilter(key)}
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${statusFilter===key ? "bg-primary/20 border-primary/40 text-primary font-semibold" : "border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/20"}`}>
+                {label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusFilter===key ? "bg-primary/20" : "bg-muted/40"}`}>{cnt}</span>
+              </button>
+            );
+          })}
+        </div>
+              {isLoading ? (
         <div className="space-y-3">
           {[0,1,2].map(i => <div key={i} className="h-24 rounded-2xl bg-card/30 animate-pulse border border-border/30" />)}
         </div>
@@ -290,7 +325,15 @@ function OrdersTab() {
                           </div>
                         )}
                     </div>
-                    <AdminOrderChat orderId={order.id} orderNumber={order.order_number} />
+                                        <div className="flex justify-end pt-1">
+                        <Button variant="ghost" size="sm"
+                          onClick={() => { if (window.confirm(`Удалить заказ #${order.order_number}? Это действие нельзя отменить.`)) deleteMutation.mutate(order.id); }}
+                          disabled={deleteMutation.isPending}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-xl h-8 px-3 text-xs">
+                          <Trash2 className="w-3 h-3 mr-1" /> Удалить заказ
+                        </Button>
+                      </div>
+                      <AdminOrderChat orderId={order.id} orderNumber={order.order_number} />
                   </motion.div>
                 )}
               </div>
