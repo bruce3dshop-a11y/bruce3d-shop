@@ -68,7 +68,9 @@ router.post("/admin-login", async (req, res) => {
       return res.status(503).json({ error: "Переменная ADMIN_PASSWORD не задана на сервере. Установите её в Railway." });
     }
     const { password } = req.body;
-    if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "Неверный пароль" });
+    const _a = require('crypto').createHash('sha256').update(String(password)).digest();
+    const _b = require('crypto').createHash('sha256').update(String(ADMIN_PASSWORD)).digest();
+    if (!require('crypto').timingSafeEqual(_a, _b)) return res.status(401).json({ error: "Неверный пароль" });
     setAdminSession(res);
     res.json({ ok: true });
   } catch {
