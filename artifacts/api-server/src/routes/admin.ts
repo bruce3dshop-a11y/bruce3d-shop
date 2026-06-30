@@ -508,5 +508,62 @@ router.post("/products/fix-image-urls", requireAdmin, async (_req, res) => {
   }
 });
 
-export default router;
+
+  // ===== ZIP DOWNLOAD =====
+  router.get("/orders/:id/files/zip", requireAdmin, async (req, res) => {
+    try {
+      const [order] = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, Number(req.params.id)))
+        .limit(1);
+
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      if (!order.file_name) return res.status(404).json({ error: "No files attached" });
+
+      let urls: { url: string; name: string }[] = [];
+      try {
+        const parsed = JSON.parse(order.file_name);
+        if (Array.isArray(parsed)) {
+          urls = parsed.map((u: string, i: number) => {
+            const rawName = decodeURIComponent(u.split("/").pop()?.split("?")[0] || `file-${i + 1}`);
+            return { url: u, name: rawName };
+          });
+        }
+      } catch {
+        return res.status(400).json({ error: "Invalid file data" });
+      }
+
+      if (urls.length === 0) return res.status(404).json({ error: "No files" });
+
+      const { default: archiver } = await import("archiver");
+      const archive = archiver("zip", { zlib: { level: 1 } });
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="order-${order.order_number}-files.zip"`
+      );
+
+      archive.pipe(res as any);
+
+      for (const { url, name } of urls) {
+        try {
+          const fileRes = await fetch(url);
+          if (!fileRes.ok) { console.warn("[zip] skip", url, fileRes.status); continue; }
+          const buffer = Buffer.from(await fileRes.arrayBuffer());
+          archive.append(buffer, { name });
+        } catch (e) {
+          console.error("[zip download]", url, e);
+        }
+      }
+
+      await archive.finalize();
+    } catch (e: any) {
+      console.error("[zip]", e);
+      if (!res.headersSent) res.status(500).json({ error: e.message });
+    }
+  });
+
+  export default router;
 
