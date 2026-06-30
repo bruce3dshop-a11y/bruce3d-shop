@@ -163,3 +163,32 @@ export async function getBotInfo() {
     return null;
   }
 }
+
+  export async function sendTelegramDocumentByUrl(
+    chatId: string | number,
+    fileUrl: string,
+    caption?: string
+  ): Promise<boolean> {
+    if (!token()) return false;
+    try {
+      const body: Record<string, unknown> = {
+        chat_id: String(chatId),
+        document: fileUrl,
+      };
+      if (caption) {
+        body.caption = caption;
+        body.parse_mode = "HTML";
+      }
+      const r = await fetch(`${api()}/sendDocument`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json() as { ok: boolean };
+      return data.ok;
+    } catch (e) {
+      console.error("Telegram sendDocumentByUrl error:", e);
+      return false;
+    }
+  }
+  
