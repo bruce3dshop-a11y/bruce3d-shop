@@ -3,6 +3,7 @@ import AdminOrderChat from "@/components/AdminOrderChat";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { getUploadSignature, uploadFileToCloudinary } from "@/lib/cloudinary";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -402,26 +403,34 @@ function GalleryTab() {
     if (!files || files.length === 0) return;
     setUploading(true);
     let uploaded = 0;
-    for (const file of Array.from(files)) {
-      try {
-        const form = new FormData();
-        form.append("image", file);
-        const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-        const resp = await fetch(`${base}/api/admin/gallery/upload`, { method: "POST", body: form, credentials: "include" });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({ error: "Ошибка" }));
-          throw new Error(err.error || "Ошибка загрузки");
-        }
-        uploaded++;
-      } catch (err: any) {
-        toast({ title: `Ошибка: ${file.name}`, description: err.message, variant: "destructive" });
+    try {
+      const sig = await getUploadSignature("gallery");
+      if (!sig) {
+        toast({ title: "Ошибка хранилища", description: "Cloudinary не настроен. Добавьте CLOUDINARY_* переменные в Railway.", variant: "destructive" });
+        return;
       }
-    }
-    setUploading(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (uploaded > 0) {
-      toast({ title: `✅ Загружено ${uploaded} фото` });
-      queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+      for (const file of Array.from(files)) {
+        try {
+          const { url } = await uploadFileToCloudinary(file, sig);
+          const resp = await fetch(`${base}/api/admin/gallery/save-url`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: url }),
+          });
+          if (!resp.ok) throw new Error("Не удалось сохранить");
+          uploaded++;
+        } catch (err: any) {
+          toast({ title: `Ошибка: ${file.name}`, description: err.message, variant: "destructive" });
+        }
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (uploaded > 0) {
+        toast({ title: `✅ Загружено ${uploaded} фото` });
+        queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+      }
     }
   };
 
@@ -515,13 +524,10 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
     if (!file) return;
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("image", file);
-      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-      const resp = await fetch(`${base}/api/products/upload-image`, { method: "POST", body: form, credentials: "include" });
-      if (!resp.ok) throw new Error("Ошибка загрузки");
-      const data = await resp.json();
-      onChange(data.url);
+      const sig = await getUploadSignature("products");
+      if (!sig) throw new Error("Cloudinary не настроен");
+      const { url } = await uploadFileToCloudinary(file, sig);
+      onChange(url);
       toast({ title: "✅ Изображение загружено!" });
     } catch (err: any) {
       toast({ title: "Ошибка загрузки", description: err.message, variant: "destructive" });
