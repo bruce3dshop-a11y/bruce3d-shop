@@ -142,7 +142,7 @@ router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
           description: `Оплата заказа #${order.order_number} — BRUCE 3D SHOP`,
           returnUrl,
         });
-        paymentLink = `yookassa:${payment.id}`;
+        paymentLink = `yookassa:${payment.id}|${confirmationUrl || ""}`;
         confirmationUrl = payment.confirmation?.confirmation_url || null;
       } catch (e: any) {
         console.error("[yookassa createPayment]", e);
@@ -562,6 +562,21 @@ router.post("/products/fix-image-urls", requireAdmin, async (_req, res) => {
     } catch (e: any) {
       console.error("[zip]", e);
       if (!res.headersSent) res.status(500).json({ error: e.message });
+    }
+  });
+
+  
+  // ===== DELETE ORDER =====
+  router.delete("/orders/:id", requireAdmin, async (req, res) => {
+    try {
+      const orderId = Number(req.params.id);
+      const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+      await db.delete(orderStatusHistoryTable).where(eq(orderStatusHistoryTable.order_id, orderId));
+      await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 
