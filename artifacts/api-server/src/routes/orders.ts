@@ -93,10 +93,10 @@ import { Router } from "express";
       const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex } = body;
       if (!name || !serviceType || !material || !description) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
       if (name.length > 200) return res.status(400).json({ error: "Имя слишком длинное (макс. 200 символов)" });
       if (description.length > 5000) return res.status(400).json({ error: "Описание слишком длинное (макс. 5000 символов)" });
       if (deliveryAddress && String(deliveryAddress).length > 500) return res.status(400).json({ error: "Адрес слишком длинный (макс. 500 символов)" });
-      }
 
       let userId: number | undefined;
       if (email) {
