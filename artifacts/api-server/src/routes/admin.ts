@@ -304,6 +304,21 @@ router.post("/gallery/upload", requireAdmin, (req, res) => {
   });
 });
 
+router.post("/gallery/save-url", requireAdmin, async (req, res) => {
+  const { imageUrl, title, category } = req.body;
+  if (!imageUrl) return res.status(400).json({ error: "imageUrl обязателен" });
+  try {
+    const [item] = await db.insert(galleryItemsTable).values({
+      image_url: imageUrl,
+      title: title || null,
+      category: category || null,
+    }).returning();
+    res.json({ ok: true, item });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===== PRODUCTS =====
 router.get("/products", requireAdmin, async (_req, res) => {
   try {
