@@ -107,10 +107,24 @@ import { Router } from "express";
         userId = user.id;
       }
 
-      const uploadedFiles = (req.files as Express.Multer.File[]) || [];
-      const fileUrls: { url: string; originalName: string }[] = [];
+      // Accept pre-uploaded file URLs (direct browser → Cloudinary upload, bypasses Railway nginx limit)
+      const preUploadedUrls: { url: string; originalName: string }[] = [];
+      if (body.fileUrls) {
+        try {
+          const parsed = JSON.parse(body.fileUrls);
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              if (typeof item === "string") preUploadedUrls.push({ url: item, originalName: item.split("/").pop() || "file" });
+              else if (item?.url) preUploadedUrls.push({ url: item.url, originalName: item.originalName || item.url.split("/").pop() || "file" });
+            }
+          }
+        } catch {}
+      }
 
-      if (uploadedFiles.length > 0 && isStorageConfigured()) {
+      const uploadedFiles = (req.files as Express.Multer.File[]) || [];
+      const fileUrls: { url: string; originalName: string }[] = [...preUploadedUrls];
+
+      if (uploadedFiles.length > 0 && isStorageConfigured() && preUploadedUrls.length === 0) {
         for (const file of uploadedFiles) {
           try {
             const url = await uploadBuffer(file.buffer, file.originalname, file.mimetype, "orders");
