@@ -7,9 +7,10 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Lock, CheckCircle, Clock, Package, Truck, XCircle, Download, CreditCard, AlertCircle } from "lucide-react";
+import { Send, Lock, CheckCircle, Clock, Package, Truck, XCircle, Download, CreditCard, AlertCircle, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { printOrderPDF } from "@/lib/printOrderPDF";
+import { getUploadSignature, uploadFileToCloudinary } from "@/lib/cloudinary";
 
 interface Message { id: number; sender: string; message: string; created_at: string; }
 interface StatusEntry { status: string; comment?: string; created_at: string; }
@@ -69,6 +70,8 @@ export default function OrderDetail() {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["order-detail", orderId],
@@ -108,7 +111,21 @@ export default function OrderDetail() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async () => {
+  const sendFileMessage = async (file: File) => {
+      setUploadingFile(true);
+      try {
+        const sig = await getUploadSignature();
+        const url = await uploadFileToCloudinary(file, sig);
+        const msg = `[FILE:${url}|${file.name}]`;
+        await apiFetch(`chat/${orderId}/send`, { method: "POST", body: JSON.stringify({ message: msg }) });
+      } catch {
+        toast({ title: "Ошибка загрузки файла", variant: "destructive" });
+      } finally {
+        setUploadingFile(false);
+      }
+    };
+
+      const sendMessage = async () => {
     if (!msgText.trim() || sending) return;
     setSending(true);
     try {
@@ -363,7 +380,19 @@ export default function OrderDetail() {
                           : "bg-card border border-border/50 rounded-bl-sm"
                       }`}
                     >
-                      {msg.message}
+                      {msg.message.startsWith("[FILE:") ? (() => {
+                          const inner = msg.message.slice(6, -1);
+                          const pi = inner.indexOf("|");
+                          const url = pi >= 0 ? inner.slice(0, pi) : inner;
+                          const name = pi >= 0 ? inner.slice(pi + 1) : "Файл";
+                          return (
+                            <a href={url} target="_blank" rel="noopener noreferrer" download
+                              className="flex items-center gap-1.5 underline hover:no-underline opacity-90">
+                              <Download className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate max-w-[200px]">{name}</span>
+                            </a>
+                          );
+                        })() : <span className="whitespace-pre-wrap break-words">{msg.message}</span>}
                       <div className="text-xs opacity-60 mt-0.5">
                         {new Date(msg.created_at).toLocaleTimeString("ru", {
                           hour: "2-digit",
@@ -376,6 +405,13 @@ export default function OrderDetail() {
                 <div ref={chatEndRef} />
               </div>
               <div className="p-3 border-t border-border/40 flex gap-2 shrink-0">
+                  <input type="file" ref={fileInputRef} className="hidden" accept="*/*"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) sendFileMessage(f); if (fileInputRef.current) fileInputRef.current.value = ""; }} />
+                  <Button size="sm" variant="ghost" onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile || sending}
+                    className="rounded-full px-2.5 h-9 text-muted-foreground hover:text-primary shrink-0">
+                    {uploadingFile ? <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                  </Button>
                 <Input
                   value={msgText}
                   onChange={e => setMsgText(e.target.value)}
