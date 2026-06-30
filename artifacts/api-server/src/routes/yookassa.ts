@@ -68,8 +68,8 @@ router.get("/status/:orderId", async (req, res) => {
 
     if (!order) return res.status(404).json({ error: "Not found" });
 
-    const paymentId = order.payment_link?.startsWith("yookassa:")
-      ? order.payment_link.replace("yookassa:", "") : null;
+    const rawLink = order.payment_link?.startsWith("yookassa:") ? order.payment_link.slice(9) : null;
+      const paymentId = rawLink ? rawLink.split("|")[0] : null
 
     if (!paymentId) return res.json({ status: order.status, paymentStatus: null });
 
