@@ -14,6 +14,7 @@ import {
   BarChart3, Image, ShoppingBag, Search, Send, Pin, Trash2,
   CheckCircle, XCircle, Eye, EyeOff, Plus, Upload, ImageIcon, Link2,
   TrendingUp, Clock, Zap, MessageCircle, Users2, X,
+  Download, ArrowUp, ArrowDown,
 } from "lucide-react";
 
 // ====== TYPES ======
@@ -107,6 +108,7 @@ function OrdersTab() {
   const [paymentLinkInput, setPaymentLinkInput] = useState("");
   const [commentInput, setCommentInput] = useState("");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"date_desc"|"date_asc"|"price_desc"|"price_asc">("date_desc");
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -123,7 +125,18 @@ function OrdersTab() {
     mutationFn: ({ id, price, paymentLink }: { id: number; price: number; paymentLink?: string }) =>
       apiFetch(`admin/orders/${id}/price`, { method: "PATCH", body: JSON.stringify({ price, paymentLink }) }),
     onSuccess: () => { toast({ title: "✅ Счёт выставлен!" }); queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); setPriceInput(""); setPaymentLinkInput(""); },
-  });
+    });
+    const createPaymentMutation = useMutation({
+      mutationFn: ({ id, price }: { id: number; price: number }) =>
+        apiFetch<{ ok: boolean; paymentUrl?: string }>(`admin/orders/${id}/price`, { method: "PATCH", body: JSON.stringify({ price }) }),
+      onSuccess: (data) => {
+        toast({ title: "✅ ЮКасса: счёт выставлен!", description: data?.paymentUrl ? "Ссылка скопирована в буфер" : "Уведомление отправлено клиенту" });
+        if (data?.paymentUrl) navigator.clipboard.writeText(data.paymentUrl).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+        setPriceInput("");
+      },
+      onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
+    });
 
   const filtered = (ordersData?.orders || []).filter(o =>
     !search || o.order_number.includes(search) || o.name.toLowerCase().includes(search.toLowerCase()) || o.email?.includes(search)
@@ -131,11 +144,19 @@ function OrdersTab() {
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Поиск по номеру, имени, email..." value={search} onChange={e => setSearch(e.target.value)}
-          className="pl-9 bg-background/50 border-border/40 rounded-xl" />
-      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="Поиск по номеру, имени, email..." value={search} onChange={e => setSearch(e.target.value)}
+              className="pl-9 bg-background/50 border-border/40 rounded-xl" />
+          </div>
+          <div className="flex gap-1.5 shrink-0 flex-wrap">
+            {(["date_desc","date_asc","price_desc","price_asc"] as const).map(v => {
+              const lbl: Record<string,string> = { date_desc:"Новые↓", date_asc:"Старые↑", price_desc:"₽↓", price_asc:"₽↑" };
+              return <button key={v} onClick={() => setSortBy(v)} className={`text-xs px-2.5 py-2 rounded-xl border transition-all ${sortBy===v?"bg-primary/20 border-primary/40 text-primary font-semibold":"border-border/40 text-muted-foreground hover:text-foreground"}`}>{lbl[v]}</button>;
+            })}
+          </div>
+        </div>
       {isLoading ? (
         <div className="space-y-3">
           {[0,1,2].map(i => <div key={i} className="h-24 rounded-2xl bg-card/30 animate-pulse border border-border/30" />)}
@@ -168,6 +189,7 @@ function OrdersTab() {
                     <div className="font-medium text-foreground/60">{serviceLabels[order.service_type] || order.service_type}</div>
                     <div>{order.material?.toUpperCase()}</div>
                     <div className="mt-1">{new Date(order.created_at).toLocaleDateString("ru", { day: "numeric", month: "short" })}</div>
+                      <div className="text-[10px] opacity-60">{new Date(order.created_at).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
                 </div>
 
@@ -242,17 +264,31 @@ function OrdersTab() {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Выставить счёт</p>
-                      <div className="flex gap-2 mb-2">
-                        <Input type="number" placeholder="Сумма (₽)" value={priceInput}
-                          onChange={e => setPriceInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40" />
-                        <Input type="url" placeholder="Ссылка на оплату" value={paymentLinkInput}
-                          onChange={e => setPaymentLinkInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40" />
-                        <Button size="sm" className="rounded-xl shrink-0 h-9 px-4"
-                          onClick={() => priceMutation.mutate({ id: order.id, price: Number(priceInput), paymentLink: paymentLinkInput || undefined })}
-                          disabled={!priceInput || priceMutation.isPending}>
-                          💰 Счёт
-                        </Button>
-                      </div>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                          <Input type="number" placeholder="Сумма (₽)" value={priceInput}
+                            onChange={e => setPriceInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40 w-32" />
+                          <Button size="sm" className="rounded-xl shrink-0 h-9 px-4 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => createPaymentMutation.mutate({ id: order.id, price: Number(priceInput) })}
+                            disabled={!priceInput || createPaymentMutation.isPending}
+                            title="Создать платёж ЮКасса и отправить ссылку клиенту в Telegram">
+                            ⚡ ЮКасса
+                          </Button>
+                          <Button size="sm" variant="outline" className="rounded-xl shrink-0 h-9 px-3 border-border/40"
+                            onClick={() => priceMutation.mutate({ id: order.id, price: Number(priceInput), paymentLink: paymentLinkInput || undefined })}
+                            disabled={!priceInput || priceMutation.isPending}>
+                            💰 Вручную
+                          </Button>
+                          {paymentLinkInput && (
+                            <Input type="url" placeholder="Ссылка на оплату" value={paymentLinkInput}
+                              onChange={e => setPaymentLinkInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40 flex-1" />
+                          )}
+                        </div>
+                        {order.payment_link?.startsWith("yookassa:") && (
+                          <div className="text-xs text-emerald-400 flex items-center gap-1.5 mb-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                            Платёж ЮКасса · {order.payment_link.replace("yookassa:","")}
+                          </div>
+                        )}
                     </div>
                     <AdminOrderChat orderId={order.id} orderNumber={order.order_number} />
                   </motion.div>
