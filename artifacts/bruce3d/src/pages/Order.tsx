@@ -36,6 +36,7 @@ const formSchema = z.object({
 );
 
 const MODEL_EXTS = new Set(["stl", "obj"]);
+  const MAX_FILE_SIZE = 150 * 1024 * 1024; // 150 MB
 
 function getExt(name: string) {
   return name.split(".").pop()?.toLowerCase() || "";
@@ -390,7 +391,7 @@ export default function Order() {
                         <UploadCloud className="w-6 h-6 text-muted-foreground" />
                         <span className="font-medium text-muted-foreground">{t.order.filesLabel}</span>
                       </span>
-                      <span className="mt-1 text-xs text-muted-foreground">{t.order.filesFormat}</span>
+                      <span className="mt-1 text-xs text-muted-foreground">Любые форматы • до 150 МБ • до 10 файлов</span>
                     </label>
                   ) : selectedFiles.length < 10 ? (
                     <label htmlFor="file-upload"
