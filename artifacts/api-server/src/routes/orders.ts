@@ -3,7 +3,7 @@ import { Router } from "express";
   import { ordersTable, orderStatusHistoryTable, usersTable } from "@workspace/db/schema";
   import { eq, desc } from "drizzle-orm";
   import { getSessionUser, isAdminSession } from "../lib/session";
-  import { sendTelegram } from "../lib/telegram";
+  import { sendTelegram, sendTelegramDocumentByUrl } from "../lib/telegram";
   import { adminChatId } from "../lib/adminState";
   import { getConfig, getGroupChatId } from "../lib/configStore";
   import { uploadBuffer, isStorageConfigured } from "../lib/storage";
@@ -13,7 +13,7 @@ import { Router } from "express";
 
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 150 * 1024 * 1024 },
   });
 
   const router = Router();
@@ -173,6 +173,19 @@ import { Router } from "express";
       });
 
       notifyTelegramNewOrder({ ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress }, fileUrls).catch(console.error);
+
+        // Send each file as a Telegram document for easy download by admin
+        if (fileUrls.length > 0 && adminChatId) {
+          const fileNotifyId = adminChatId;
+          (async () => {
+            for (const f of fileUrls) {
+              try {
+                const caption = `📎 Файл к заказу #${orderNumber}: <b>${f.originalName}</b>`;
+                await sendTelegramDocumentByUrl(fileNotifyId, f.url, caption);
+              } catch (e) { console.error("[order file to tg]", e); }
+            }
+          })().catch(console.error);
+        }
 
       const groupId = getGroupChatId();
       if (groupId) {
