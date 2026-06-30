@@ -11,7 +11,7 @@ import { getConfig, updateConfig } from "../lib/configStore";
 import { createPayment, isYookassaConfigured } from "../lib/yookassa";
 import { broadcastOrderUpdate } from "./chat";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -326,6 +326,35 @@ router.delete("/products/:id", requireAdmin, async (req, res) => {
     await db.delete(productsTable).where(eq(productsTable.id, Number(req.params.id)));
     res.json({ ok: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post("/products/upload-image", requireAdmin, (req, res) => {
+  const imgUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+  imgUpload.single("image")(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    const file = (req as any).file as Express.Multer.File | undefined;
+    if (!file) return res.status(400).json({ error: "Файл не получен" });
+    try {
+      const { uploadBuffer, isStorageConfigured } = await import("../lib/storage");
+      let url: string;
+      if (isStorageConfigured()) {
+        url = await uploadBuffer(file.buffer, file.originalname, file.mimetype, "products");
+      } else {
+        const ext = path.extname(file.originalname) || ".jpg";
+        const filename = `product-${Date.now()}${ext}`;
+        const uploadDir = path.join(process.cwd(), "uploads");
+        fs.mkdirSync(uploadDir, { recursive: true });
+        fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
+        const proto = req.headers["x-forwarded-proto"] || req.protocol;
+        const host = req.headers["x-forwarded-host"] || req.get("host");
+        url = `${proto}://${host}/uploads/${filename}`;
+      }
+      res.json({ ok: true, url });
+    } catch (e: any) {
+      console.error("[admin/products/upload-image]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 // ===== BOT CONFIG =====
