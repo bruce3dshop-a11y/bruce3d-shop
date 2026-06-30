@@ -11,6 +11,7 @@ import reviewsRouter from "./reviews";
 import statsRouter from "./stats";
 import supportRouter from "./support";
 import yookassaRouter from "./yookassa";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -18,6 +19,7 @@ router.use(healthRouter);
 router.use("/auth", authRouter);
 router.use("/orders", ordersRouter);
 router.use("/order", ordersRouter);
+router.use("/upload", uploadRouter);
 router.use("/admin", adminRouter);
 router.use("/webhook", webhookRouter);
 router.use("/chat", chatRouter);
