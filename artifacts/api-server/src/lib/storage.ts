@@ -13,6 +13,13 @@ function sign(params: Record<string, string>, secret: string): string {
   return crypto.createHash("sha256").update(str + secret).digest("hex");
 }
 
+export function createUploadSignature(folder: string, timestamp: string) {
+  if (!isStorageConfigured()) return null;
+  const params: Record<string, string> = { folder, timestamp };
+  const signature = sign(params, API_SECRET!);
+  return { signature, apiKey: API_KEY!, cloudName: CLOUD_NAME!, timestamp, folder };
+}
+
 export async function uploadBuffer(
   buffer: Buffer,
   originalName: string,
