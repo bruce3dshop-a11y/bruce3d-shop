@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
+import { uploadFilesToCloudinary } from "@/lib/cloudinary";
 import { useI18n } from "@/lib/i18n";
 
 const formSchema = z.object({
@@ -130,7 +131,17 @@ export default function Order() {
     try {
       const fd = new FormData();
       Object.entries(values).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
-      selectedFiles.forEach(file => fd.append("files", file));
+
+      // Upload files directly to Cloudinary from browser (bypasses Railway nginx 1MB limit)
+      if (selectedFiles.length > 0) {
+        const uploaded = await uploadFilesToCloudinary(selectedFiles, "orders");
+        if (uploaded.length > 0) {
+          fd.append("fileUrls", JSON.stringify(uploaded));
+        } else {
+          // Fallback: attach files directly (works only for small files < 1MB)
+          selectedFiles.forEach(file => fd.append("files", file));
+        }
+      }
 
       const res = await fetch(`${import.meta.env.BASE_URL}api/order`, {
         method: "POST", body: fd, credentials: "include",
