@@ -72,7 +72,7 @@ export default function Tracker() {
 
       <div className="flex gap-3 mb-8">
         <Input
-          placeholder="#B3D-2024XXXX или просто цифры"
+          placeholder="Например: B3DA1B2C3D"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleTrack()}
