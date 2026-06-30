@@ -73,6 +73,15 @@ function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: 
   const ServiceIcon = SERVICE_ICONS[order.service_type] || Package;
   const needsConfirm = order.price && order.status === "accepted";
   const isDone = ["completed","rejected","confirmed"].includes(order.status);
+    const paymentUrl = (() => {
+      if (!order.payment_link) return null;
+      if (order.payment_link.startsWith("yookassa:")) {
+        const parts = order.payment_link.slice(9).split("|");
+        return parts[1] && parts[1].startsWith("http") ? parts[1] : null;
+      }
+      if (order.payment_link.startsWith("http")) return order.payment_link;
+      return null;
+    })();
   const { t } = useI18n();
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -108,10 +117,22 @@ function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: 
 
           <div className="flex flex-col gap-2 items-end shrink-0">
             {needsConfirm && (
-              <Button size="sm" className="rounded-full h-8 text-xs shadow-lg shadow-primary/30" onClick={onConfirm} disabled={confirming}>
-                {confirming ? "..." : t.dashboard.confirm}
-              </Button>
-            )}
+                paymentUrl ? (
+                  <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" className="rounded-full h-9 text-xs px-4 shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700 border-0 font-bold">
+                      💳 Оплатить заказ
+                    </Button>
+                  </a>
+                ) : (
+                  <Button size="sm" className="rounded-full h-8 text-xs shadow-lg shadow-primary/30" onClick={onConfirm} disabled={confirming}>
+                    {confirming ? "..." : "Подтвердить"}
+                  </Button>
+                )
+              )}
+              {needsConfirm && order.price && (
+                <span className="text-xs text-emerald-400 font-bold text-right">К оплате: {order.price} ₽</span>
+              )}
+                          )}
             <Link href={`/order/${order.id}`}>
               <Button variant="outline" size="sm" className="rounded-full h-8 text-xs border-border/50 hover:border-primary/50">
                 {t.dashboard.details} <ArrowRight className="ml-1 w-3 h-3" />
