@@ -155,8 +155,7 @@ function OrdersTab() {
         if (sortBy === "price_desc") return (Number(b.price) || 0) - (Number(a.price) || 0);
         if (sortBy === "price_asc") return (Number(a.price) || 0) - (Number(b.price) || 0);
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })
-  );
+      });
 
   return (
     <div className="space-y-4">
