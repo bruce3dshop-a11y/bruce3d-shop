@@ -10,7 +10,12 @@ const router = Router();
 router.get("/me", async (req, res) => {
   try {
     const user = await getSessionUser(req);
-    if (!user) return res.json({ user: null });
+    if (!user) {
+      if (isAdminSession(req)) {
+        return res.json({ user: { id: 0, name: "Администратор", email: "admin@bruce3d.local", is_admin: true } });
+      }
+      return res.json({ user: null });
+    }
     const isAdmin = isAdminSession(req) || !!user.is_admin;
     res.json({ user: { ...user, is_admin: isAdmin } });
   } catch {
