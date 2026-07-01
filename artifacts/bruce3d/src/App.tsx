@@ -79,9 +79,7 @@ function Router() {
           <Route path="/order">
             <RequireAuth><Order /></RequireAuth>
           </Route>
-          <Route path="/order/:id">
-            <RequireAuth><OrderDetail /></RequireAuth>
-          </Route>
+          <Route path="/order/:id" component={OrderDetail} />
           <Route path="/dashboard">
             <RequireAuth><Dashboard /></RequireAuth>
           </Route>
