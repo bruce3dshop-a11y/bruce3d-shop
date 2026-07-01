@@ -97,8 +97,8 @@ import { useState, useEffect, useRef } from "react";
       if (fileInputRef.current) fileInputRef.current.value = "";
       setUploadingFile(true);
       try {
-        const sig = await getUploadSignature();
-        const url = await uploadFileToCloudinary(file, sig);
+        const sig = await getUploadSignature("chat");
+        const { url } = await uploadFileToCloudinary(file, sig);
         await sendRaw(`[FILE:${url}|${file.name}]`);
       } catch {
         toast({ title: "Ошибка загрузки файла", variant: "destructive" });
