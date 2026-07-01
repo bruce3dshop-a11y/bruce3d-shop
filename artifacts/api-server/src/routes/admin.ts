@@ -118,7 +118,7 @@ router.patch("/orders/:id/status", requireAdmin, async (req, res) => {
 
 router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
   try {
-    const { price } = req.body;
+    const { price, paymentLink: manualPaymentLink } = req.body;
     const orderId = Number(req.params.id);
 
     if (!price || isNaN(Number(price)) || Number(price) <= 0) {
@@ -148,6 +148,8 @@ router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
         console.error("[yookassa createPayment]", e);
         return res.status(502).json({ error: `Ошибка ЮКасса: ${e.message}` });
       }
+    } else if (manualPaymentLink && typeof manualPaymentLink === "string" && manualPaymentLink.startsWith("http")) {
+      paymentLink = manualPaymentLink;
     }
 
     await db.update(ordersTable).set({
