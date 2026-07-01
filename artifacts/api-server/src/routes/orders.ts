@@ -329,5 +329,26 @@ import { Router } from "express";
       }
     });
 
-    export default router;
+    router.post("/:id/cancel", async (req, res) => {
+        try {
+          const orderId = Number(req.params.id);
+          if (!orderId) return res.status(400).json({ error: "Invalid order id" });
+          const sessionUser = await getSessionUser(req);
+          const adminAccess = isAdminSession(req);
+          if (!sessionUser && !adminAccess) return res.status(401).json({ error: "Не авторизован" });
+          const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+          if (!order) return res.status(404).json({ error: "Заказ не найден" });
+          if (!adminAccess && order.user_id !== sessionUser?.id) return res.status(403).json({ error: "Нет доступа" });
+          const cancellable = ["new", "accepted", "calculating"];
+          if (!cancellable.includes(order.status)) return res.status(409).json({ error: "Заказ нельзя отменить на этом этапе (" + order.status + ")" });
+          await db.update(ordersTable).set({ status: "cancelled", updated_at: new Date() }).where(eq(ordersTable.id, orderId));
+          await db.insert(orderStatusHistoryTable).values({ order_id: orderId, status: "cancelled", comment: adminAccess ? "Отменён администратором" : "Клиент отменил заказ" });
+          res.json({ ok: true });
+        } catch (e) {
+          console.error("[orders/cancel]", e);
+          res.status(500).json({ error: "Ошибка отмены заказа" });
+        }
+      });
+
+      export default router;
   
