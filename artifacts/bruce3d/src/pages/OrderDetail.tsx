@@ -72,6 +72,7 @@ import { useState, useEffect, useRef } from "react";
     const [sending, setSending] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFile, setUploadingFile] = useState(false);
@@ -275,12 +276,6 @@ import { useState, useEffect, useRef } from "react";
                   </div>
                 )}
 
-                {showConfirmButton && (
-                  <Button className="w-full rounded-full mt-2" onClick={confirmOrder} disabled={confirming}>
-                    {confirming ? "Подтверждение..." : "Подтвердить заказ"}
-                  </Button>
-                )}
-
                 {isAdmin && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -297,6 +292,20 @@ import { useState, useEffect, useRef } from "react";
                   <div>Заказ оплачен и подтверждён!</div>
                   {order.price && <div className="text-sm font-normal opacity-80">Сумма: {order.price} ₽</div>}
                 </div>
+              </div>
+            )}
+
+            {canCancel && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
+                  onClick={cancelOrder}
+                  disabled={cancelling}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  {cancelling ? "Отмена заказа..." : "Отменить заказ"}
+                </Button>
               </div>
             )}
           </div>

@@ -220,4 +220,33 @@ router.post("/sessions/:id/close", async (req: Request, res: Response) => {
   }
 });
 
+// ── Admin: delete single session ──
+router.delete("/sessions/:id", async (req: Request, res: Response) => {
+  if (!isAdminSession(req)) return res.status(401).json({ error: "Admin required" });
+  try {
+    const id = Number(req.params.id);
+    await db.delete(supportMessagesTable).where(eq(supportMessagesTable.session_id, id));
+    await db.delete(supportSessionsTable).where(eq(supportSessionsTable.id, id));
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "DB error" });
+  }
+});
+
+// ── Admin: bulk-delete sessions ──
+router.post("/sessions/bulk-delete", async (req: Request, res: Response) => {
+  if (!isAdminSession(req)) return res.status(401).json({ error: "Admin required" });
+  try {
+    const { ids } = req.body as { ids: number[] };
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: "ids required" });
+    for (const id of ids) {
+      await db.delete(supportMessagesTable).where(eq(supportMessagesTable.session_id, id));
+      await db.delete(supportSessionsTable).where(eq(supportSessionsTable.id, id));
+    }
+    res.json({ ok: true, deleted: ids.length });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

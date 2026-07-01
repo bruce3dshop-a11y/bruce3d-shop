@@ -217,20 +217,32 @@ function OrdersTab() {
             );
           })}
         </div>
-              {selectedOrders.size > 0 && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20 flex-wrap">
-            <span className="text-sm font-semibold text-primary flex-1">Выбрано: {selectedOrders.size}</span>
-            <Button variant="destructive" size="sm" className="rounded-xl text-xs h-8"
-              onClick={() => { if (window.confirm(`Удалить ${selectedOrders.size} заказов? Это действие нельзя отменить.`)) bulkDeleteMutation.mutate(Array.from(selectedOrders)); }}
-              disabled={bulkDeleteMutation.isPending}>
-              <Trash2 className="w-3 h-3 mr-1" /> Удалить выбранные
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-xl text-xs h-8"
-              onClick={() => setSelectedOrders(new Set())}>
-              Снять выделение
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="ghost" size="sm" className="rounded-xl text-xs h-8 border border-border/40"
+            onClick={() => {
+              if (selectedOrders.size === filtered.length) {
+                setSelectedOrders(new Set());
+              } else {
+                setSelectedOrders(new Set(filtered.map(o => o.id)));
+              }
+            }}>
+            {selectedOrders.size === filtered.length && filtered.length > 0 ? "Снять все" : "Выбрать все"}
+          </Button>
+          {selectedOrders.size > 0 && (
+            <>
+              <span className="text-sm font-semibold text-primary">Выбрано: {selectedOrders.size}</span>
+              <Button variant="destructive" size="sm" className="rounded-xl text-xs h-8"
+                onClick={() => { if (window.confirm(`Удалить ${selectedOrders.size} заказ(ов)? Это действие нельзя отменить.`)) bulkDeleteMutation.mutate(Array.from(selectedOrders)); }}
+                disabled={bulkDeleteMutation.isPending}>
+                <Trash2 className="w-3 h-3 mr-1" /> Удалить выбранные
+              </Button>
+              <Button variant="ghost" size="sm" className="rounded-xl text-xs h-8"
+                onClick={() => setSelectedOrders(new Set())}>
+                Снять выделение
+              </Button>
+            </>
+          )}
+        </div>
 
         {isLoading ? (
         <div className="space-y-3">
@@ -240,10 +252,19 @@ function OrdersTab() {
         <div className="space-y-3">
           {filtered.map(order => (
             <div key={order.id}
-              className={`rounded-2xl border bg-card/40 backdrop-blur-sm transition-all cursor-pointer hover:bg-card/60 ${selectedOrder?.id === order.id ? "border-primary/40 bg-primary/5" : "border-border/40 hover:border-primary/20"}`}
+              className={`rounded-2xl border bg-card/40 backdrop-blur-sm transition-all cursor-pointer hover:bg-card/60 ${selectedOrder?.id === order.id ? "border-primary/40 bg-primary/5" : selectedOrders.has(order.id) ? "border-primary/30 bg-primary/5" : "border-border/40 hover:border-primary/20"}`}
               onClick={() => { setSelectedOrder(selectedOrder?.id === order.id ? null : order); setPriceInput(order.price?.toString() || ""); setPaymentLinkInput(order.payment_link || ""); setCommentInput(""); }}>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="shrink-0 mt-0.5" onClick={e => { e.stopPropagation(); setSelectedOrders(prev => { const next = new Set(prev); next.has(order.id) ? next.delete(order.id) : next.add(order.id); return next; }); }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.has(order.id)}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded border-border/60 accent-primary cursor-pointer"
+                      />
+                    </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-black font-display">#{order.order_number}</span>
@@ -259,6 +280,7 @@ function OrdersTab() {
                       {order.email && <span>{order.email}</span>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{order.description}</p>
+                  </div>
                   </div>
                   <div className="text-right text-xs text-muted-foreground shrink-0">
                     <div className="font-medium text-foreground/60">{serviceLabels[order.service_type] || order.service_type}</div>
@@ -973,12 +995,34 @@ function SupportChatsTab() {
   const [selected, setSelected] = useState<SupportSession | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [selectedSessions, setSelectedSessions] = useState<Set<number>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: sessionsData, refetch } = useQuery({
     queryKey: ["support-sessions"],
     queryFn: () => apiFetch<{ sessions: SupportSession[] }>("support/sessions"),
     refetchInterval: 10000,
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: (id: number) => apiFetch(`support/sessions/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast({ title: "🗑 Чат удалён" });
+      setSelected(null);
+      queryClient.invalidateQueries({ queryKey: ["support-sessions"] });
+    },
+    onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
+  });
+
+  const bulkDeleteSessionsMutation = useMutation({
+    mutationFn: (ids: number[]) => apiFetch("support/sessions/bulk-delete", { method: "POST", body: JSON.stringify({ ids }) }),
+    onSuccess: () => {
+      toast({ title: "🗑 Выбранные чаты удалены" });
+      setSelectedSessions(new Set());
+      setSelected(null);
+      queryClient.invalidateQueries({ queryKey: ["support-sessions"] });
+    },
+    onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
   });
 
   const { data: msgsData } = useQuery({
@@ -1023,11 +1067,25 @@ function SupportChatsTab() {
     <div className="grid md:grid-cols-[260px_1fr] gap-4 h-[520px]">
       {/* Sessions list */}
       <div className="rounded-2xl border border-border/40 bg-card/40 flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-border/30 flex items-center justify-between">
+        <div className="p-3 border-b border-border/30 flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Диалоги</span>
-          <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full">
-            {sessions.filter(s => s.status === "open").length} активных
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full">
+              {sessions.filter(s => s.status === "open").length} активных
+            </span>
+            <button
+              onClick={() => setSelectedSessions(selectedSessions.size === sessions.length && sessions.length > 0 ? new Set() : new Set(sessions.map(s => s.id)))}
+              className="text-xs px-2 py-0.5 rounded-full border border-border/40 text-muted-foreground hover:text-foreground transition-colors">
+              {selectedSessions.size === sessions.length && sessions.length > 0 ? "Снять" : "Все"}
+            </button>
+            {selectedSessions.size > 0 && (
+              <button
+                onClick={() => { if (window.confirm(`Удалить ${selectedSessions.size} чат(ов)?`)) bulkDeleteSessionsMutation.mutate(Array.from(selectedSessions)); }}
+                className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-colors">
+                <Trash2 className="w-3 h-3 inline mr-1" />Удалить ({selectedSessions.size})
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-border/20">
           {sessions.length === 0 && (
@@ -1037,16 +1095,25 @@ function SupportChatsTab() {
             </div>
           )}
           {sessions.map(s => (
-            <button key={s.id} onClick={() => setSelected(s)}
-              className={`w-full text-left p-3 hover:bg-white/5 transition-all ${selected?.id === s.id ? "bg-primary/10 border-l-2 border-primary" : ""}`}>
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-sm font-semibold text-white truncate">{s.visitor_name}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.status === "open" ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/30"}`}>
-                  {s.status === "open" ? "открыт" : "закрыт"}
-                </span>
+            <div key={s.id} className={`flex items-start gap-2 p-3 hover:bg-white/5 transition-all ${selected?.id === s.id ? "bg-primary/10 border-l-2 border-primary" : selectedSessions.has(s.id) ? "bg-primary/5" : ""}`}>
+              <div className="pt-0.5 shrink-0" onClick={e => { e.stopPropagation(); setSelectedSessions(prev => { const next = new Set(prev); next.has(s.id) ? next.delete(s.id) : next.add(s.id); return next; }); }}>
+                <input type="checkbox" checked={selectedSessions.has(s.id)} onChange={() => {}} className="w-3.5 h-3.5 rounded accent-primary cursor-pointer" />
               </div>
-              <p className="text-[11px] text-muted-foreground">{formatDate(s.last_message_at)}</p>
-            </button>
+              <button className="flex-1 text-left min-w-0" onClick={() => setSelected(s)}>
+                <div className="flex items-center justify-between mb-0.5 gap-1">
+                  <span className="text-sm font-semibold text-white truncate">{s.visitor_name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${s.status === "open" ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/30"}`}>
+                    {s.status === "open" ? "открыт" : "закрыт"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{formatDate(s.last_message_at)}</p>
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); if (window.confirm(`Удалить чат с "${s.visitor_name}"?`)) deleteSessionMutation.mutate(s.id); }}
+                className="shrink-0 text-muted-foreground hover:text-red-400 transition-colors p-0.5 mt-0.5">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       </div>
