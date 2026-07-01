@@ -10,7 +10,7 @@ import {
   UploadCloud, Loader2, X, FileText, CheckCircle, ArrowRight,
   MapPin, Truck, Package, Home as HomeIcon, Bike, Plus,
   Printer, PenTool, ScanLine, Wrench, Phone, Mail, Send, User,
-  Layers, ChevronRight, Sparkles,
+  ChevronRight, Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -137,8 +137,6 @@ export default function Order() {
   });
 
   const deliveryType = form.watch("deliveryType");
-  const serviceType = form.watch("serviceType");
-  const material = form.watch("material");
 
   function addFiles(newFiles: FileList | null) {
     if (!newFiles) return;
