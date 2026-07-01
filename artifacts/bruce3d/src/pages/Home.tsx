@@ -63,8 +63,8 @@ export default function Home() {
     staleTime: 60000,
   });
 
-  const ordersCount = statsData?.stats?.orders_count ?? 312;
-  const clientsCount = statsData?.stats?.clients_count ?? 500;
+  const ordersCount = Math.max(100, statsData?.stats?.orders_count ?? 100);
+  const clientsCount = Math.max(100, statsData?.stats?.clients_count ?? 100);
 
   const stats = [
     { icon: <Users className="w-5 h-5" />, value: clientsCount, suffix: "+", label: "Клиентов" },
