@@ -35,6 +35,7 @@ import { useState, useEffect, useRef } from "react";
     completed: <CheckCircle className="w-4 h-4" />,
     confirmed: <CheckCircle className="w-4 h-4" />,
     rejected: <XCircle className="w-4 h-4" />,
+      cancelled: <XCircle className="w-4 h-4" />,
   };
 
   const statusLabels: Record<string, string> = {
@@ -46,6 +47,7 @@ import { useState, useEffect, useRef } from "react";
     completed: "Завершён",
     confirmed: "Оплачен и подтверждён",
     rejected: "Отклонён",
+      cancelled: "Отменён",
   };
 
   const statusColors: Record<string, string> = {
@@ -57,6 +59,7 @@ import { useState, useEffect, useRef } from "react";
     completed: "text-green-400",
     confirmed: "text-green-400",
     rejected: "text-red-400",
+      cancelled: "text-red-400",
   };
 
   export default function OrderDetail() {
@@ -113,7 +116,21 @@ import { useState, useEffect, useRef } from "react";
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    const sendFileMessage = async (file: File) => {
+    const cancelOrder = async () => {
+        if (!window.confirm("Вы уверены, что хотите отменить заказ? Это действие нельзя отменить.")) return;
+        setCancelling(true);
+        try {
+          await apiFetch(`orders/${orderId}/cancel`, { method: "POST" });
+          toast({ title: "Заказ отменён" });
+          refetch();
+        } catch (err: any) {
+          toast({ title: err?.message || "Ошибка отмены", variant: "destructive" });
+        } finally {
+          setCancelling(false);
+        }
+      };
+
+      const sendFileMessage = async (file: File) => {
       setUploadingFile(true);
       try {
         const sig = await getUploadSignature("chat");
@@ -207,7 +224,8 @@ import { useState, useEffect, useRef } from "react";
     const hasBill = !!order.price;
     const hasPaymentLink = !!order.payment_link;
     // Confirm button only for clients — admin manages orders via admin panel
-    const showConfirmButton = !isAdmin && hasBill && !isConfirmed && (paymentPaid || !hasPaymentLink);
+    const cancellableStatuses = ["new", "accepted", "calculating"];
+      const canCancel = !isAdmin && cancellableStatuses.includes(order.status);
 
     return (
       <div className="container mx-auto px-4 py-12 max-w-4xl">
