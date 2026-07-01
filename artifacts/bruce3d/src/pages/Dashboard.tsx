@@ -67,7 +67,7 @@ function StatusProgress({ status }: { status: string }) {
   );
 }
 
-function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: () => void; confirming: boolean }) {
+function OrderCard({ order }: { order: Order }) {
   const sc = STATUS[order.status as keyof typeof STATUS] || STATUS.new;
   const StatusIcon = sc.icon;
   const ServiceIcon = SERVICE_ICONS[order.service_type] || Package;
@@ -114,19 +114,16 @@ function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: 
           </div>
 
           <div className="flex flex-col gap-2 items-end shrink-0">
-            {needsConfirm && (
-                paymentUrl ? (
-                  <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" className="rounded-full h-9 text-xs px-4 shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700 border-0 font-bold">
-                      💳 Оплатить заказ
-                    </Button>
-                  </a>
-                ) : (
-                  <Button size="sm" className="rounded-full h-8 text-xs shadow-lg shadow-primary/30" onClick={onConfirm} disabled={confirming}>
-                    {confirming ? "..." : "Подтвердить"}
+            {needsConfirm && paymentUrl && (
+                <a href={paymentUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" className="rounded-full h-9 text-xs px-4 shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700 border-0 font-bold">
+                    💳 Оплатить заказ
                   </Button>
-                )
+                </a>
               )}
+            {needsConfirm && !paymentUrl && (
+              <span className="text-xs text-muted-foreground italic text-right">Ожидает счёта</span>
+            )}
               {needsConfirm && order.price && (
                 <span className="text-xs text-emerald-400 font-bold text-right">К оплате: {order.price} ₽</span>
               )}
@@ -184,11 +181,6 @@ export default function Dashboard() {
     queryFn: () => apiFetch<{ orders: Order[] }>("orders/my"),
     enabled: !!user,
     refetchInterval: 20000,
-  });
-
-  const confirmMutation = useMutation({
-    mutationFn: (orderId: number) => apiFetch(`orders/${orderId}/confirm`, { method: "POST" }),
-    onSuccess: () => { toast({ title: "✅ Заказ подтверждён!" }); queryClient.invalidateQueries({ queryKey: ["my-orders"] }); },
   });
 
   const orders = ordersData?.orders || [];
@@ -290,7 +282,7 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-3">
                     {activeOrders.map(order => (
-                      <OrderCard key={order.id} order={order} onConfirm={() => confirmMutation.mutate(order.id)} confirming={confirmMutation.isPending} />
+                      <OrderCard key={order.id} order={order} />
                     ))}
                   </div>
                 </div>
@@ -303,7 +295,7 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-3">
                     {doneOrders.map(order => (
-                      <OrderCard key={order.id} order={order} onConfirm={() => confirmMutation.mutate(order.id)} confirming={false} />
+                      <OrderCard key={order.id} order={order} />
                     ))}
                   </div>
                 </div>
