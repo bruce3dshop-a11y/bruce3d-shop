@@ -9,11 +9,8 @@ export function Footer() {
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div className="md:col-span-1">
-            <div className="flex items-center gap-2 mb-3">
-              <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-10 w-10 object-contain" />
-              <span className="font-display font-bold text-lg text-foreground">
-                BRUCE<span className="text-primary">3D</span>
-              </span>
+            <div className="mb-3">
+              <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-10 w-auto max-w-[140px] object-contain" />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Профессиональная 3D-печать в Москве и Московской области. Отправляем заказы по всей России и миру. Killer Bunny™

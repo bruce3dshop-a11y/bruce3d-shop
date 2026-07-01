@@ -63,11 +63,8 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-12 w-12 object-contain" />
-          <span className="font-display font-bold text-lg tracking-tight text-foreground">
-            BRUCE <span className="text-primary">3D</span> <span className="text-sm font-normal text-muted-foreground">SHOP</span>
-          </span>
+        <Link href="/" className="flex items-center shrink-0">
+          <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-12 w-auto max-w-[160px] object-contain" />
         </Link>
 
         {/* Desktop Nav */}
