@@ -37,7 +37,7 @@ async function notifyClient(orderId: number, message: string) {
 router.get("/orders", requireAdmin, async (req, res) => {
   try {
     const orders = await db.select().from(ordersTable).orderBy(desc(ordersTable.created_at));
-    res.json({ orders });
+    res.json({ orders, yookassaEnabled: isYookassaConfigured() });
   } catch {
     res.status(500).json({ error: "Failed to get orders" });
   }
