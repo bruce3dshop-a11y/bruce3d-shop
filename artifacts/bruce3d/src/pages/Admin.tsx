@@ -113,7 +113,7 @@ function OrdersTab() {
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: () => apiFetch<{ orders: Order[] }>("admin/orders"),
+    queryFn: () => apiFetch<{ orders: Order[]; yookassaEnabled: boolean }>("admin/orders"),
     refetchInterval: 15000,
   });
 
@@ -126,18 +126,18 @@ function OrdersTab() {
     mutationFn: ({ id, price, paymentLink }: { id: number; price: number; paymentLink?: string }) =>
       apiFetch(`admin/orders/${id}/price`, { method: "PATCH", body: JSON.stringify({ price, paymentLink }) }),
     onSuccess: () => { toast({ title: "✅ Счёт выставлен!" }); queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); setPriceInput(""); setPaymentLinkInput(""); },
-    });
-    const createPaymentMutation = useMutation({
-      mutationFn: ({ id, price }: { id: number; price: number }) =>
-        apiFetch<{ ok: boolean; paymentUrl?: string }>(`admin/orders/${id}/price`, { method: "PATCH", body: JSON.stringify({ price }) }),
-      onSuccess: (data) => {
-        toast({ title: "✅ ЮКасса: счёт выставлен!", description: data?.paymentUrl ? "Ссылка скопирована в буфер" : "Уведомление отправлено клиенту" });
-        if (data?.paymentUrl) navigator.clipboard.writeText(data.paymentUrl).catch(() => {});
-        queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-        setPriceInput("");
-      },
-      onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
-    });
+  });
+  const createPaymentMutation = useMutation({
+    mutationFn: ({ id, price }: { id: number; price: number }) =>
+      apiFetch<{ ok: boolean; paymentUrl?: string; yookassaEnabled?: boolean }>(`admin/orders/${id}/price`, { method: "PATCH", body: JSON.stringify({ price }) }),
+    onSuccess: (data) => {
+      toast({ title: "✅ ЮКасса: счёт выставлен!", description: data?.paymentUrl ? "Ссылка скопирована в буфер" : "Уведомление отправлено клиенту" });
+      if (data?.paymentUrl) navigator.clipboard.writeText(data.paymentUrl).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      setPriceInput("");
+    },
+    onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
+  });
 
   const STATUS_GROUPS: Record<string, string[]> = {
       new: ["new", "calculating"],
@@ -159,6 +159,13 @@ function OrdersTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        {ordersData && (
+          ordersData.yookassaEnabled
+            ? <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />ЮКасса подключена</span>
+            : <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />ЮКасса не настроена</span>
+        )}
+      </div>
       <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
