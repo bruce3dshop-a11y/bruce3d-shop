@@ -110,6 +110,7 @@ function OrdersTab() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date_desc"|"date_asc"|"price_desc"|"price_asc">("date_desc");
   const [statusFilter, setStatusFilter] = useState("all");
+    const [selectedOrders, setSelectedOrders] = useState<Set<number>>(new Set());
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin-orders"],
@@ -143,6 +144,18 @@ function OrdersTab() {
       mutationFn: (id: number) => apiFetch(`admin/orders/${id}`, { method: "DELETE" }),
       onSuccess: () => { toast({ title: "🗑 Заказ удалён" }); queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); },
       onError: (e: any) => toast({ title: "Ошибка удаления: " + (e?.message || ""), variant: "destructive" }),
+    });
+
+    const deleteChatMutation = useMutation({
+      mutationFn: (id: number) => apiFetch(`admin/orders/${id}/chat`, { method: "DELETE" }),
+      onSuccess: () => { toast({ title: "💬 Чат очищен" }); },
+      onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
+    });
+
+    const bulkDeleteMutation = useMutation({
+      mutationFn: (ids: number[]) => apiFetch("admin/orders/bulk-delete", { method: "POST", body: JSON.stringify({ ids }) }),
+      onSuccess: () => { toast({ title: "🗑 Выбранные заказы удалены" }); setSelectedOrders(new Set()); queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); },
+      onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
     });
 
     const STATUS_GROUPS: Record<string, string[]> = {
@@ -204,7 +217,22 @@ function OrdersTab() {
             );
           })}
         </div>
-              {isLoading ? (
+              {selectedOrders.size > 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20 flex-wrap">
+            <span className="text-sm font-semibold text-primary flex-1">Выбрано: {selectedOrders.size}</span>
+            <Button variant="destructive" size="sm" className="rounded-xl text-xs h-8"
+              onClick={() => { if (window.confirm(`Удалить ${selectedOrders.size} заказов? Это действие нельзя отменить.`)) bulkDeleteMutation.mutate(Array.from(selectedOrders)); }}
+              disabled={bulkDeleteMutation.isPending}>
+              <Trash2 className="w-3 h-3 mr-1" /> Удалить выбранные
+            </Button>
+            <Button variant="ghost" size="sm" className="rounded-xl text-xs h-8"
+              onClick={() => setSelectedOrders(new Set())}>
+              Снять выделение
+            </Button>
+          </div>
+        )}
+
+        {isLoading ? (
         <div className="space-y-3">
           {[0,1,2].map(i => <div key={i} className="h-24 rounded-2xl bg-card/30 animate-pulse border border-border/30" />)}
         </div>
