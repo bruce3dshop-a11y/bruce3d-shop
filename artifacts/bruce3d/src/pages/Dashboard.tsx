@@ -132,7 +132,6 @@ function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: 
               {needsConfirm && order.price && (
                 <span className="text-xs text-emerald-400 font-bold text-right">К оплате: {order.price} ₽</span>
               )}
-                          )}
             <Link href={`/order/${order.id}`}>
               <Button variant="outline" size="sm" className="rounded-full h-8 text-xs border-border/50 hover:border-primary/50">
                 {t.dashboard.details} <ArrowRight className="ml-1 w-3 h-3" />
