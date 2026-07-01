@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { ordersTable, orderStatusHistoryTable, usersTable, reviewsTable, galleryItemsTable, productsTable } from "@workspace/db/schema";
+import { ordersTable, orderStatusHistoryTable, usersTable, reviewsTable, galleryItemsTable, productsTable, orderMessagesTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { isAdminSession } from "../lib/session";
   import { verifyAdminToken } from "./auth";
@@ -585,6 +585,34 @@ router.post("/products/fix-image-urls", requireAdmin, async (_req, res) => {
       res.json({ ok: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.delete("/orders/:id/chat", requireAdmin, async (req, res) => {
+    try {
+      const orderId = Number(req.params.id);
+      if (!orderId) return res.status(400).json({ error: "Invalid id" });
+      await db.delete(orderMessagesTable).where(eq(orderMessagesTable.order_id, orderId));
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("[admin/delete-chat]", e);
+      res.status(500).json({ error: "Ошибка удаления чата" });
+    }
+  });
+
+  router.post("/orders/bulk-delete", requireAdmin, async (req, res) => {
+    try {
+      const { ids } = req.body as { ids: number[] };
+      if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: "ids required" });
+      for (const id of ids) {
+        await db.delete(orderMessagesTable).where(eq(orderMessagesTable.order_id, id));
+        await db.delete(orderStatusHistoryTable).where(eq(orderStatusHistoryTable.order_id, id));
+        await db.delete(ordersTable).where(eq(ordersTable.id, id));
+      }
+      res.json({ ok: true, deleted: ids.length });
+    } catch (e) {
+      console.error("[admin/bulk-delete]", e);
+      res.status(500).json({ error: "Ошибка массового удаления" });
     }
   });
 
