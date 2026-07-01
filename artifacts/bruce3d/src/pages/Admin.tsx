@@ -139,7 +139,13 @@ function OrdersTab() {
     onError: (e: any) => toast({ title: "Ошибка: " + (e?.message || ""), variant: "destructive" }),
   });
 
-  const STATUS_GROUPS: Record<string, string[]> = {
+  const deleteMutation = useMutation({
+      mutationFn: (id: number) => apiFetch(`admin/orders/${id}`, { method: "DELETE" }),
+      onSuccess: () => { toast({ title: "🗑 Заказ удалён" }); queryClient.invalidateQueries({ queryKey: ["admin-orders"] }); },
+      onError: (e: any) => toast({ title: "Ошибка удаления: " + (e?.message || ""), variant: "destructive" }),
+    });
+
+    const STATUS_GROUPS: Record<string, string[]> = {
       new: ["new", "calculating"],
       active: ["accepted", "working", "printing", "postprocess"],
       ready: ["ready", "shipped"],
