@@ -73,15 +73,13 @@ function OrderCard({ order, onConfirm, confirming }: { order: Order; onConfirm: 
   const ServiceIcon = SERVICE_ICONS[order.service_type] || Package;
   const needsConfirm = order.price && order.status === "accepted";
   const isDone = ["completed","rejected","confirmed"].includes(order.status);
-    const paymentUrl = (() => {
-      if (!order.payment_link) return null;
-      if (order.payment_link.startsWith("yookassa:")) {
-        const parts = order.payment_link.slice(9).split("|");
-        return parts[1] && parts[1].startsWith("http") ? parts[1] : null;
-      }
-      if (order.payment_link.startsWith("http")) return order.payment_link;
-      return null;
-    })();
+    // Payment URL: if yookassa payment exists, use backend redirect (works for all formats)
+      const paymentUrl = (() => {
+        if (!order.payment_link) return null;
+        if (order.payment_link.startsWith("yookassa:")) return `/api/yookassa/pay/${order.id}`;
+        if (order.payment_link.startsWith("http")) return order.payment_link;
+        return null;
+      })();
   const { t } = useI18n();
   const [chatOpen, setChatOpen] = useState(false);
 
