@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import {
   Package, Clock, CheckCircle, Truck, XCircle,
   ArrowRight, ExternalLink, CreditCard, Plus,
@@ -172,9 +171,7 @@ function OrderCard({ order }: { order: Order }) {
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
-  const { toast } = useToast();
   const { t } = useI18n();
-  const queryClient = useQueryClient();
 
   const { data: ordersData, isLoading, refetch } = useQuery({
     queryKey: ["my-orders"],
