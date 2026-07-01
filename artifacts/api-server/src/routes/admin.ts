@@ -142,8 +142,8 @@ router.patch("/orders/:id/price", requireAdmin, async (req, res) => {
           description: `Оплата заказа #${order.order_number} — BRUCE 3D SHOP`,
           returnUrl,
         });
-        paymentLink = `yookassa:${payment.id}|${confirmationUrl || ""}`;
         confirmationUrl = payment.confirmation?.confirmation_url || null;
+        paymentLink = `yookassa:${payment.id}|${confirmationUrl || ""}`;
       } catch (e: any) {
         console.error("[yookassa createPayment]", e);
         return res.status(502).json({ error: `Ошибка ЮКасса: ${e.message}` });
