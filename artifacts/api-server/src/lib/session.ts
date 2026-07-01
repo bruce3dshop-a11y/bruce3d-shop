@@ -38,7 +38,7 @@ import { type Request, type Response } from "express";
   }
 
   export function clearSessionUser(res: Response) {
-    res.clearCookie(USER_COOKIE);
+    res.clearCookie(USER_COOKIE, cookieOpts);
   }
 
   export function setAdminSession(res: Response) {
@@ -50,6 +50,6 @@ import { type Request, type Response } from "express";
   }
 
   export function clearAdminSession(res: Response) {
-    res.clearCookie(ADMIN_COOKIE);
+    res.clearCookie(ADMIN_COOKIE, cookieOpts);
   }
   
