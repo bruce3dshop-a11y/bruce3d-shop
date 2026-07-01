@@ -80,4 +80,36 @@ router.get("/status/:orderId", async (req, res) => {
   }
 });
 
-export default router;
+
+  // ===== PAYMENT REDIRECT (client-facing) =====
+  router.get("/pay/:orderId", async (req, res) => {
+    try {
+      const [order] = await db.select({
+        id: ordersTable.id,
+        payment_link: ordersTable.payment_link,
+        status: ordersTable.status,
+      }).from(ordersTable).where(eq(ordersTable.id, Number(req.params.orderId))).limit(1);
+
+      if (!order) return res.status(404).send("Заказ не найден");
+      if (!order.payment_link?.startsWith("yookassa:")) return res.status(404).send("Платёж не создан");
+
+      const raw = order.payment_link.slice(9);
+      const parts = raw.split("|");
+      const paymentId = parts[0];
+      const storedUrl = parts[1] || "";
+
+      // If we already stored the URL — redirect directly
+      if (storedUrl.startsWith("http")) return res.redirect(302, storedUrl);
+
+      // Otherwise fetch fresh from YooKassa API
+      const payment = await getPayment(paymentId);
+      const confirmUrl = payment?.confirmation?.confirmation_url;
+      if (confirmUrl) return res.redirect(302, confirmUrl);
+
+      return res.status(410).send("Ссылка на оплату недоступна или истекла. Обратитесь в поддержку.");
+    } catch (e: any) {
+      res.status(500).send("Ошибка: " + e.message);
+    }
+  });
+
+  export default router;
