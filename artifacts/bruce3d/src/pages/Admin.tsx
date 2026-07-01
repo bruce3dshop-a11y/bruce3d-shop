@@ -312,10 +312,8 @@ function OrdersTab() {
                             disabled={!priceInput || priceMutation.isPending}>
                             💰 Вручную
                           </Button>
-                          {paymentLinkInput && (
-                            <Input type="url" placeholder="Ссылка на оплату" value={paymentLinkInput}
-                              onChange={e => setPaymentLinkInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40 flex-1" />
-                          )}
+                          <Input type="url" placeholder="Ссылка на оплату (вручную)" value={paymentLinkInput}
+                              onChange={e => setPaymentLinkInput(e.target.value)} className="bg-background/50 h-9 text-sm rounded-xl border-border/40 flex-1 min-w-[180px]" />
                         </div>
                         {order.payment_link?.startsWith("yookassa:") && (
                           <div className="text-xs text-emerald-400 flex items-center gap-1.5 mb-2">
@@ -324,7 +322,8 @@ function OrdersTab() {
                           </div>
                         )}
                     </div>
-                                        <div className="flex justify-end pt-1">
+                                        <div className="flex items-center justify-between pt-1">
+                        <a href={`${(import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')}/order/${order.id}`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 text-xs text-primary font-semibold px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"><Link2 className="w-3 h-3" /> Открыть страницу заказа</a>
                         <Button variant="ghost" size="sm"
                           onClick={() => { if (window.confirm(`Удалить заказ #${order.order_number}? Это действие нельзя отменить.`)) deleteMutation.mutate(order.id); }}
                           disabled={deleteMutation.isPending}
