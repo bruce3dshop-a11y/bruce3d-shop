@@ -7,7 +7,7 @@ export const translations = {
     nav: {
       home: "Главная", shop: "🐰 Магазин", services: "Услуги",
       prices: "Цены", gallery: "Галерея", reviews: "Отзывы",
-      tracker: "Трекер", login: "Войти", logout: "Выйти",
+      tracker: "Трекер", calculator: "Калькулятор", login: "Войти", logout: "Выйти",
       order: "Заказать печать", admin: "Панель администратора",
     },
     home: {
@@ -80,7 +80,7 @@ export const translations = {
     nav: {
       home: "Home", shop: "🐰 Shop", services: "Services",
       prices: "Prices", gallery: "Gallery", reviews: "Reviews",
-      tracker: "Tracker", login: "Log In", logout: "Log Out",
+      tracker: "Tracker", calculator: "Calculator", login: "Log In", logout: "Log Out",
       order: "Order Print", admin: "Admin Panel",
     },
     home: {

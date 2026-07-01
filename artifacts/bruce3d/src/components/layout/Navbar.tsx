@@ -1,5 +1,5 @@
 import { Link, useRoute } from "wouter";
-import { Menu, X, User, Shield, LogOut, LogIn, Home, ShoppingBag, Wrench, Tag, Image, Star, Search, Printer, ChevronRight, Zap } from "lucide-react";
+import { Menu, X, User, Shield, LogOut, LogIn, Home, ShoppingBag, Wrench, Tag, Image, Star, Search, Printer, ChevronRight, Zap, Calculator } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -41,13 +41,14 @@ function NavLink({ href, label, onClick }: { href: string; label: string; onClic
 }
 
 const NAV_ITEMS = [
-  { href: "/",         icon: Home,        labelKey: "home" as const },
-  { href: "/shop",     icon: ShoppingBag, labelKey: "shop" as const },
-  { href: "/services", icon: Printer,     labelKey: "services" as const },
-  { href: "/prices",   icon: Tag,         labelKey: "prices" as const },
-  { href: "/gallery",  icon: Image,       labelKey: "gallery" as const },
-  { href: "/reviews",  icon: Star,        labelKey: "reviews" as const },
-  { href: "/tracker",  icon: Search,      labelKey: "tracker" as const },
+  { href: "/",            icon: Home,        labelKey: "home" as const },
+  { href: "/shop",        icon: ShoppingBag, labelKey: "shop" as const },
+  { href: "/services",    icon: Printer,     labelKey: "services" as const },
+  { href: "/prices",      icon: Tag,         labelKey: "prices" as const },
+  { href: "/gallery",     icon: Image,       labelKey: "gallery" as const },
+  { href: "/reviews",     icon: Star,        labelKey: "reviews" as const },
+  { href: "/calculator",  icon: Calculator,  labelKey: "calculator" as const },
+  { href: "/tracker",     icon: Search,      labelKey: "tracker" as const },
 ];
 
 function MobileMenu({
@@ -266,6 +267,7 @@ export function Navbar() {
     { href: "/prices", label: t.nav.prices },
     { href: "/gallery", label: t.nav.gallery },
     { href: "/reviews", label: t.nav.reviews },
+    { href: "/calculator", label: t.nav.calculator },
     { href: "/tracker", label: t.nav.tracker },
   ];
 
@@ -273,8 +275,11 @@ export function Navbar() {
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-3 shrink-0">
             <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-11 w-11 object-contain" />
+            <span className="text-base font-black tracking-tight leading-none">
+              BRUCE <span className="text-primary">3D</span> SHOP
+            </span>
           </Link>
 
           {/* Desktop Nav */}
