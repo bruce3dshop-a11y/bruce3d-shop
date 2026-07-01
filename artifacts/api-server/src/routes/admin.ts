@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { ordersTable, orderStatusHistoryTable, usersTable, reviewsTable, galleryItemsTable, productsTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { isAdminSession } from "../lib/session";
+  import { verifyAdminToken } from "./auth";
 import { sendTelegram } from "../lib/telegram";
 import { getConfig, updateConfig } from "../lib/configStore";
 import { createPayment, isYookassaConfigured } from "../lib/yookassa";
@@ -16,9 +17,14 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 const router = Router();
 
 function requireAdmin(req: any, res: any, next: any) {
-  if (!isAdminSession(req)) return res.status(401).json({ error: "Admin required" });
-  next();
-}
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+    const headerToken = req.headers["x-admin-token"] as string | undefined;
+    const tokenOk = headerToken ? verifyAdminToken(headerToken, ADMIN_PASSWORD) : false;
+    if (!isAdminSession(req) && !tokenOk) {
+      return res.status(401).json({ error: "Admin only" });
+    }
+    next();
+  }
 
 async function notifyClient(orderId: number, message: string) {
   try {
