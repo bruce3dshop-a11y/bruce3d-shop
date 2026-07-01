@@ -39,14 +39,14 @@ function ScrollToTop() {
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !isAdmin) {
       navigate("/login");
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isAdmin, isLoading, navigate]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center min-h-[60vh]">
@@ -54,7 +54,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     </div>;
   }
 
-  if (!user) return null;
+  if (!user && !isAdmin) return null;
   return <>{children}</>;
 }
 
