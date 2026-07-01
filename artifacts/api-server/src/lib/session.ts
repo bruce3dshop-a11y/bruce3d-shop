@@ -6,13 +6,13 @@ import { type Request, type Response } from "express";
   const USER_COOKIE = "bruce3d_user";
   const ADMIN_COOKIE = "bruce3d_admin";
 
-  // Detect production/Railway environment for secure cross-domain cookies
+  // Detect Railway/production for correct cross-domain cookie settings (SameSite=none)
   const isProduction =
     process.env.NODE_ENV === "production" ||
     !!process.env.RAILWAY_ENVIRONMENT ||
     !!process.env.RAILWAY_PROJECT_ID ||
     !!process.env.RAILWAY_SERVICE_ID ||
-    !!process.env.FRONTEND_URL; // If FRONTEND_URL is set, we're cross-domain
+    !!process.env.FRONTEND_URL;
 
   const cookieOpts = {
     httpOnly: true,
