@@ -181,7 +181,7 @@ export default function Dashboard() {
   });
 
   const orders = ordersData?.orders || [];
-  const activeOrders = orders.filter(o => !["completed","rejected","confirmed"].includes(o.status));
+  const activeOrders = orders.filter(o => !["completed","rejected","confirmed","cancelled"].includes(o.status));
   const doneOrders = orders.filter(o => ["completed","rejected","confirmed"].includes(o.status));
 
   const initials = user?.name?.split(" ").map((p: string) => p[0]).join("").slice(0,2).toUpperCase() || "?";
