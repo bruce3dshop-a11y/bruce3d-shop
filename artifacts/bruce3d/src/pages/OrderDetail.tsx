@@ -114,8 +114,8 @@ export default function OrderDetail() {
   const sendFileMessage = async (file: File) => {
       setUploadingFile(true);
       try {
-        const sig = await getUploadSignature();
-        const url = await uploadFileToCloudinary(file, sig);
+        const sig = await getUploadSignature("chat");
+        const { url } = await uploadFileToCloudinary(file, sig);
         const msg = `[FILE:${url}|${file.name}]`;
         await apiFetch(`chat/${orderId}/send`, { method: "POST", body: JSON.stringify({ message: msg }) });
       } catch {
