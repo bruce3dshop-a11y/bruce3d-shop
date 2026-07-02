@@ -1,5 +1,5 @@
 import { Link, useRoute } from "wouter";
-import { Menu, X, User, Shield, LogOut, LogIn, Home, ShoppingBag, Wrench, Tag, Image, Star, Search, Printer, ChevronRight, Zap, Calculator } from "lucide-react";
+import { Menu, X, User, Shield, LogOut, LogIn, Home, ShoppingBag, Tag, Image, Star, Search, Printer, ChevronRight, Zap, Calculator } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,6 @@ function MobileMenu({
   user: any; isAdmin: boolean; activeCount: number;
   logout: () => void; t: any; lang: string; setLang: (l: any) => void;
 }) {
-  // Lock body scroll when menu open
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -92,49 +91,36 @@ function MobileMenu({
             className="fixed top-0 right-0 bottom-0 z-[100] w-[320px] max-w-[90vw] flex flex-col"
             style={{ background: "linear-gradient(160deg, #0d0d1a 0%, #111127 60%, #0d0d1a 100%)" }}
           >
-            {/* Purple glow top */}
+            {/* Glow effects */}
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
 
             {/* Header */}
             <div className="relative flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5">
-              <Link href="/" onClick={onClose}>
-                <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-11 w-11 object-contain" />
+              <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
+                <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-10 w-10 object-contain" />
+                <span className="text-sm font-black tracking-tight leading-none text-white">
+                  BRUCE <span className="text-primary">3D</span> SHOP
+                </span>
               </Link>
               <button
                 onClick={onClose}
                 className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all"
               >
-                <X className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+                <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
 
-            {/* Nav links */}
-            <nav className="relative flex-1 overflow-y-auto px-4 py-5 space-y-1">
-              {NAV_ITEMS.map(({ href, icon: Icon, labelKey }, i) => (
-                <MobileNavItem
-                  key={href}
-                  href={href}
-                  icon={Icon}
-                  label={t.nav[labelKey]}
-                  delay={i * 0.04}
-                  onClick={onClose}
-                  isShop={href === "/shop"}
-                />
-              ))}
-
-              {/* Divider */}
-              <div className="my-4 border-t border-white/5" />
-
-              {/* User section */}
+            {/* ── USER BLOCK AT TOP ── */}
+            <div className="relative px-4 pt-3 pb-2 border-b border-white/5">
               {user ? (
-                <>
+                <div className="space-y-1">
                   <Link
                     href="/dashboard"
                     onClick={onClose}
                     className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-all group"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-black shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary text-xs font-black shrink-0">
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -152,40 +138,61 @@ function MobileMenu({
                     onClick={() => { logout(); onClose(); }}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 w-full text-left transition-all group"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                       <LogOut className="w-4 h-4 text-white/30 group-hover:text-red-400 transition-colors" />
                     </div>
                     <span className="text-sm text-white/40 group-hover:text-red-400 transition-colors">{t.nav.logout}</span>
                   </button>
-                </>
+                </div>
               ) : (
                 <Link
                   href="/login"
                   onClick={onClose}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-all group"
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 transition-all group"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                     <LogIn className="w-4 h-4 text-white/40 group-hover:text-primary transition-colors" />
                   </div>
-                  <span className="text-sm text-white/60 group-hover:text-white transition-colors">{t.nav.login}</span>
+                  <div>
+                    <div className="text-sm font-semibold text-white/60 group-hover:text-white transition-colors">{t.nav.login}</div>
+                    <div className="text-xs text-white/30">Войдите в аккаунт</div>
+                  </div>
                 </Link>
               )}
+            </div>
+
+            {/* Nav links */}
+            <nav className="relative flex-1 overflow-y-auto px-4 py-4 space-y-1">
+              {NAV_ITEMS.map(({ href, icon: Icon, labelKey }, i) => (
+                <MobileNavItem
+                  key={href}
+                  href={href}
+                  icon={Icon}
+                  label={t.nav[labelKey]}
+                  delay={i * 0.04}
+                  onClick={onClose}
+                  isShop={href === "/shop"}
+                />
+              ))}
 
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-yellow-500/10 transition-all group"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
-                    <Shield className="w-4 h-4 text-yellow-400/60 group-hover:text-yellow-400 transition-colors" />
-                  </div>
-                  <span className="text-sm text-yellow-400/70 group-hover:text-yellow-400 transition-colors">{t.nav.admin}</span>
-                </Link>
+                <>
+                  <div className="my-3 border-t border-white/5" />
+                  <Link
+                    href="/admin"
+                    onClick={onClose}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-yellow-500/10 transition-all group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-yellow-400/60 group-hover:text-yellow-400 transition-colors" />
+                    </div>
+                    <span className="text-sm text-yellow-400/70 group-hover:text-yellow-400 transition-colors">{t.nav.admin}</span>
+                  </Link>
+                </>
               )}
 
               {/* Lang */}
-              <div className="flex items-center justify-between px-3 py-2 mt-1">
+              <div className="flex items-center justify-between px-3 py-2 mt-2">
                 <span className="text-xs text-white/25">Язык / Language</span>
                 <LangToggle dark />
               </div>
@@ -194,7 +201,7 @@ function MobileMenu({
             {/* CTA button */}
             <div className="relative px-4 pb-6 pt-3 border-t border-white/5">
               <Link href="/order" onClick={onClose}>
-                <button className="relative w-full h-13 rounded-2xl overflow-hidden group" style={{ height: 52 }}>
+                <button className="relative w-full rounded-2xl overflow-hidden group" style={{ height: 52 }}>
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-500" />
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-white/10 to-violet-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                   <div className="relative flex items-center justify-center gap-2 text-white font-bold text-sm">
