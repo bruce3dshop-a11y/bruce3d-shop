@@ -3,7 +3,7 @@ import { Router } from "express";
     import { ordersTable, orderStatusHistoryTable, usersTable } from "@workspace/db/schema";
     import { eq, desc } from "drizzle-orm";
     import { getSessionUser, isAdminSession } from "../lib/session";
-    import { sendTelegram, sendTelegramDocumentByUrl } from "../lib/telegram";
+    import { sendTelegram, sendTelegramDocumentByUrl, sendTelegramDocumentBuffer } from "../lib/telegram";
     import { adminChatId } from "../lib/adminState";
     import { getConfig, getGroupChatId } from "../lib/configStore";
     import { uploadBuffer, isStorageConfigured } from "../lib/storage";
@@ -44,7 +44,8 @@ import { Router } from "express";
         service_type: string; material: string; description: string; delivery_type?: string | null;
         delivery_city?: string | null; delivery_address?: string | null;
       },
-      fileUrls?: { url: string; originalName: string }[]
+      fileUrls?: { url: string; originalName: string }[],
+      rawFileCount?: number
     ) {
       const chatId = adminChatId;
       if (!chatId) return;
@@ -66,6 +67,8 @@ import { Router } from "express";
         ? `\n📎 Файл: <a href="${fileUrls![0].url}">${fileUrls![0].originalName}</a>`
         : fileCount > 1
         ? `\n📎 Файлов: ${fileCount}\n${fileUrls!.map(f => `• <a href="${f.url}">${f.originalName}</a>`).join("\n")}`
+        : rawFileCount && rawFileCount > 0
+        ? `\n📎 Файлов: ${rawFileCount} (прикреплены следующими сообщениями)`
         : "";
 
       const siteUrl = getSiteUrl();
@@ -75,14 +78,14 @@ import { Router } from "express";
 
       const text = `🆕 <b>Новый заказ #${order.order_number}</b>
 
-    👤 <b>${order.name}</b>
-    ${contact}
+👤 <b>${order.name}</b>
+${contact}
 
-    🔧 Услуга: ${service}
-    🧱 Материал: ${order.material.toUpperCase()}
-    📦 Доставка: ${delivery}${fileNote}
+🔧 Услуга: ${service}
+🧱 Материал: ${order.material.toUpperCase()}
+📦 Доставка: ${delivery}${fileNote}
 
-    📝 ${order.description.slice(0, 500)}${order.description.length > 500 ? "..." : ""}${adminLink}`;
+📝 ${order.description.slice(0, 500)}${order.description.length > 500 ? "..." : ""}${adminLink}`;
 
       await sendTelegram(chatId, text);
     }
@@ -123,6 +126,7 @@ import { Router } from "express";
         const uploadedFiles = (req.files as Express.Multer.File[]) || [];
         const fileUrls: { url: string; originalName: string }[] = [...preUploadedUrls];
 
+        // Upload to Cloudinary if configured and no pre-uploaded URLs
         if (uploadedFiles.length > 0 && isStorageConfigured() && preUploadedUrls.length === 0) {
           for (const file of uploadedFiles) {
             try {
@@ -171,16 +175,34 @@ import { Router } from "express";
           comment: "Заказ создан",
         });
 
-        notifyTelegramNewOrder({ ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress }, fileUrls).catch(console.error);
+        // Notify Telegram — include raw file count if they'll be sent as separate messages
+        const rawFilesToSend = uploadedFiles.length > 0 && fileUrls.length === 0 ? uploadedFiles : [];
+        notifyTelegramNewOrder(
+          { ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress },
+          fileUrls,
+          rawFilesToSend.length
+        ).catch(console.error);
 
-        if (fileUrls.length > 0 && adminChatId) {
-          const fileNotifyId = adminChatId;
+        // Send files to Telegram admin
+        if (adminChatId) {
           (async () => {
-            for (const f of fileUrls) {
-              try {
-                const caption = `📎 Файл к заказу #${orderNumber}: <b>${f.originalName}</b>`;
-                await sendTelegramDocumentByUrl(fileNotifyId, f.url, caption);
-              } catch (e) { console.error("[order file to tg]", e); }
+            // Case 1: Files uploaded to Cloudinary — send by URL
+            if (fileUrls.length > 0) {
+              for (const f of fileUrls) {
+                try {
+                  const caption = `📎 Файл к заказу #${orderNumber}: <b>${f.originalName}</b>`;
+                  await sendTelegramDocumentByUrl(adminChatId, f.url, caption);
+                } catch (e) { console.error("[order file url to tg]", e); }
+              }
+            }
+            // Case 2: No Cloudinary — send raw buffers directly to Telegram
+            else if (rawFilesToSend.length > 0) {
+              for (const file of rawFilesToSend) {
+                try {
+                  const caption = `📎 Файл к заказу #${orderNumber}: <b>${file.originalname}</b>`;
+                  await sendTelegramDocumentBuffer(adminChatId, file.buffer, file.originalname, caption);
+                } catch (e) { console.error("[order file buf to tg]", e); }
+              }
             }
           })().catch(console.error);
         }
@@ -259,48 +281,22 @@ import { Router } from "express";
         res.json({ order: { ...order, payment_link: paymentUrl }, paymentPaid, history, messages: [] });
       } catch (e) {
         console.error("[orders/:id]", e);
-        res.status(500).json({ error: "Failed to get order" });
+        res.status(500).json({ error: "Server error" });
       }
     });
 
-    router.get("/track/:orderNumber", async (req, res) => {
-      try {
-        const [order] = await db.select({
-          id: ordersTable.id,
-          order_number: ordersTable.order_number,
-          status: ordersTable.status,
-          service_type: ordersTable.service_type,
-          material: ordersTable.material,
-          created_at: ordersTable.created_at,
-          updated_at: ordersTable.updated_at,
-        }).from(ordersTable).where(eq(ordersTable.order_number, req.params.orderNumber)).limit(1);
-
-        if (!order) return res.status(404).json({ error: "Not found" });
-
-        const history = await db.select().from(orderStatusHistoryTable)
-          .where(eq(orderStatusHistoryTable.order_id, order.id));
-
-        res.json({ ...order, history });
-      } catch {
-        res.status(500).json({ error: "DB error" });
-      }
-    });
-
-    // FIX: admin can confirm order (e.g., cash payment); regular user still requires YooKassa payment
     router.post("/:id/confirm", async (req, res) => {
       try {
-        const user = await getSessionUser(req);
-        const isAdmin = isAdminSession(req);
-        if (!user && !isAdmin) return res.status(401).json({ error: "Unauthorized" });
-
         const orderId = Number(req.params.id);
+        if (!orderId) return res.status(400).json({ error: "Invalid order id" });
+
+        const sessionUser = await getSessionUser(req);
+        const isAdmin = isAdminSession(req);
+        if (!sessionUser && !isAdmin) return res.status(401).json({ error: "Не авторизован" });
+
         const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
         if (!order) return res.status(404).json({ error: "Заказ не найден" });
-        if (!isAdmin && order.user_id !== user?.id) return res.status(403).json({ error: "Forbidden" });
-
-        if (!order.price) {
-          return res.status(400).json({ error: "Счёт ещё не выставлен" });
-        }
+        if (!isAdmin && order.user_id !== sessionUser?.id) return res.status(403).json({ error: "Нет доступа" });
 
         if (!isAdmin && order.payment_link?.startsWith("yookassa:") && isYookassaConfigured()) {
           const raw = order.payment_link.slice("yookassa:".length);
@@ -351,4 +347,3 @@ import { Router } from "express";
       });
 
       export default router;
-  
