@@ -533,9 +533,12 @@ router.post("/products/fix-image-urls", requireAdmin, async (_req, res) => {
       try {
         const parsed = JSON.parse(order.file_name);
         if (Array.isArray(parsed)) {
-          urls = parsed.map((u: string, i: number) => {
-            const rawName = decodeURIComponent(u.split("/").pop()?.split("?")[0] || `file-${i + 1}`);
-            return { url: u, name: rawName };
+          urls = parsed.map((item: any, i: number) => {
+            if (typeof item === "string") {
+              const rawName = decodeURIComponent(item.split("/").pop()?.split("?")[0] || `file-${i + 1}`);
+              return { url: item, name: rawName };
+            }
+            return { url: item.url, name: item.name || decodeURIComponent((item.url || "").split("/").pop()?.split("?")[0] || `file-${i + 1}`) };
           });
         }
       } catch {
