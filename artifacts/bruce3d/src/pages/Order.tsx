@@ -471,9 +471,17 @@ export default function Order() {
             {/* ── 05 Файлы ── */}
             <StepCard num="05" title="Файлы модели">
               <div className="space-y-3">
+                {/* Скрытый input — вызываем напрямую через ref, не через label htmlFor */}
                 <input
-                  ref={fileInputRef} type="file" multiple className="hidden" id="file-upload"
-                  onChange={(e) => addFiles(e.target.files)}
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    addFiles(e.target.files);
+                    // Сброс чтобы можно было повторно выбрать тот же файл
+                    e.target.value = "";
+                  }}
                 />
 
                 {selectedFiles.length > 0 && (
@@ -485,9 +493,12 @@ export default function Order() {
                 )}
 
                 {selectedFiles.length === 0 ? (
-                  <label
-                    htmlFor="file-upload"
-                    className={`flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer bg-card/20 group ${isDragging ? "border-primary bg-primary/8 scale-[1.01]" : "border-border/40 hover:border-primary/50 hover:bg-primary/3"}`}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
+                    className={`flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer bg-card/20 group select-none ${isDragging ? "border-primary bg-primary/8 scale-[1.01]" : "border-border/40 hover:border-primary/50 hover:bg-primary/3"}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
@@ -507,12 +518,15 @@ export default function Order() {
                       <div className="text-xs text-muted-foreground/60 mt-1">STL, 3MF, OBJ, GLB, PLY · фото, PDF, чертежи, архивы (ZIP, RAR) · любые файлы · до 150 МБ · до 10 шт</div>
                     </div>
                     <div className="text-xs text-muted-foreground/40">Необязательно — можно описать задачу текстом</div>
-                  </label>
+                  </div>
                 ) : selectedFiles.length < 10 ? (
-                  <label htmlFor="file-upload"
-                    className="flex items-center justify-center gap-2 w-full h-10 transition-all border border-dashed rounded-xl cursor-pointer border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-sm text-primary/60 hover:text-primary">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 w-full h-10 transition-all border border-dashed rounded-xl cursor-pointer border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-sm text-primary/60 hover:text-primary"
+                  >
                     <Plus className="w-4 h-4" /> Добавить ещё файлы
-                  </label>
+                  </button>
                 ) : null}
               </div>
             </StepCard>
