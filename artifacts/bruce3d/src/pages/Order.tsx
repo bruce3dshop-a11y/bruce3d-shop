@@ -171,14 +171,17 @@ export default function Order() {
 
   const deliveryType = form.watch("deliveryType");
 
-  function addFiles(newFiles: FileList | null) {
-    if (!newFiles) return;
+  function addFiles(source: FileList | File[] | null) {
+    if (!source) return;
+    // Немедленно копируем в Array — iOS Safari инвалидирует FileList
+    // к моменту выполнения lazy setState updater
+    const snapshot: File[] = Array.from(source);
+    if (snapshot.length === 0) return;
     setSelectedFiles(prev => {
       const existing = new Set(prev.map(f => f.name + f.size));
-      const toAdd = Array.from(newFiles).filter(f => !existing.has(f.name + f.size));
+      const toAdd = snapshot.filter(f => !existing.has(f.name + f.size));
       return [...prev, ...toAdd].slice(0, 10);
     });
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function removeFile(idx: number) {
@@ -502,8 +505,10 @@ export default function Order() {
                       multiple
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       onChange={(e) => {
-                        addFiles(e.target.files);
+                        // Снимок ДО e.target.value = "" — iOS Safari инвалидирует FileList после сброса
+                        const files = Array.from(e.target.files ?? []);
                         e.target.value = "";
+                        addFiles(files);
                       }}
                     />
                     <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-colors pointer-events-none ${isDragging ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20 group-hover:bg-primary/15"}`}>
@@ -519,14 +524,15 @@ export default function Order() {
                   </div>
                 ) : selectedFiles.length < 10 ? (
                   /* Для кнопки "ещё файлы" — тот же overlay-подход */
-                  <div className="relative w-full h-10 overflow-hidden rounded-xl border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group">
+                  <div className="relative w-full h-10 rounded-xl border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group">
                     <input
                       type="file"
                       multiple
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       onChange={(e) => {
-                        addFiles(e.target.files);
+                        const files = Array.from(e.target.files ?? []);
                         e.target.value = "";
+                        addFiles(files);
                       }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-primary/60 group-hover:text-primary pointer-events-none">
