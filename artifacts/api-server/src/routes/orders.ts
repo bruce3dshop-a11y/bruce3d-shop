@@ -9,12 +9,63 @@ import { Router } from "express";
     import { uploadBuffer, isStorageConfigured } from "../lib/storage";
     import { getPayment, isYookassaConfigured } from "../lib/yookassa";
     import { randomBytes } from "crypto";
-    import multer from "multer";
+    import busboy from "busboy";
+    import type { IncomingMessage } from "http";
 
-    const upload = multer({
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 150 * 1024 * 1024 },
-    });
+    const MAX_FILE_SIZE = 150 * 1024 * 1024; // 150 МБ
+    const MAX_FILES = 10;
+
+    interface ParsedFile {
+      fieldname: string;
+      originalname: string;
+      buffer: Buffer;
+      mimetype: string;
+      size: number;
+    }
+
+    interface ParsedForm {
+      fields: Record<string, string>;
+      files: ParsedFile[];
+    }
+
+    /** Парсим multipart/form-data вручную через busboy.
+     *  multer@1.x несовместим с Express 5 при обработке файловых стримов. */
+    function parseMultipart(req: IncomingMessage): Promise<ParsedForm> {
+      return new Promise((resolve, reject) => {
+        const fields: Record<string, string> = {};
+        const files: ParsedFile[] = [];
+
+        const bb = busboy({
+          headers: req.headers as Record<string, string>,
+          limits: { fileSize: MAX_FILE_SIZE, files: MAX_FILES },
+        });
+
+        bb.on("field", (name, value) => {
+          fields[name] = value;
+        });
+
+        bb.on("file", (fieldname, stream, info) => {
+          const chunks: Buffer[] = [];
+          stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+          stream.on("end", () => {
+            const buffer = Buffer.concat(chunks);
+            files.push({
+              fieldname,
+              originalname: info.filename ?? "file",
+              buffer,
+              mimetype: info.mimeType ?? "application/octet-stream",
+              size: buffer.length,
+            });
+          });
+          stream.on("error", reject);
+        });
+
+        bb.on("finish", () => resolve({ fields, files }));
+        bb.on("error", reject);
+
+        req.pipe(bb);
+      });
+    }
 
     const router = Router();
 
@@ -90,9 +141,11 @@ ${contact}
       await sendTelegram(chatId, text);
     }
 
-    router.post("/", upload.array("files", 10), async (req, res) => {
+    router.post("/", async (req, res) => {
       try {
-        const body = req.body;
+        // Парсим multipart через busboy (multer@1.x несовместим с Express 5)
+        const { fields, files: uploadedFiles } = await parseMultipart(req);
+        const body = fields;
         const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex } = body;
         if (!name || !serviceType || !material || !description) {
           return res.status(400).json({ error: "Missing required fields" });
@@ -122,8 +175,6 @@ ${contact}
             }
           } catch {}
         }
-
-        const uploadedFiles = (req.files as Express.Multer.File[]) || [];
         const fileUrls: { url: string; originalName: string }[] = [...preUploadedUrls];
 
         // Upload to Cloudinary if configured and no pre-uploaded URLs
