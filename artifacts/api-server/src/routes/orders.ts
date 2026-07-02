@@ -190,9 +190,9 @@ ${contact}
         }
 
         const fileNamesJson = fileUrls.length > 0
-          ? JSON.stringify(fileUrls.map(f => f.url))
+          ? JSON.stringify(fileUrls.map(f => ({ url: f.url, name: f.originalName })))
           : uploadedFiles.length > 0
-          ? JSON.stringify(uploadedFiles.map(f => f.originalname))
+          ? JSON.stringify(uploadedFiles.map(f => ({ url: f.originalname, name: f.originalname })))
           : null;
 
         let orderNumber: string;
