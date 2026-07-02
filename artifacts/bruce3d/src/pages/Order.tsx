@@ -18,7 +18,6 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
-import { uploadFilesToCloudinary } from "@/lib/cloudinary";
 import { useI18n } from "@/lib/i18n";
 
 const formSchema = z.object({
@@ -123,6 +122,7 @@ export default function Order() {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [success, setSuccess] = useState<{ orderNumber: string; orderId?: number } | null>(null);
   const [showInstruction, setShowInstruction] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -189,14 +189,8 @@ export default function Order() {
       fd.append("serviceType", selectedServices.join(", "));
       fd.append("material", selectedMaterials.join(", "));
 
-      if (selectedFiles.length > 0) {
-        const uploaded = await uploadFilesToCloudinary(selectedFiles, "orders");
-        if (uploaded.length > 0) {
-          fd.append("fileUrls", JSON.stringify(uploaded));
-        } else {
-          selectedFiles.forEach(file => fd.append("files", file));
-        }
-      }
+      // Отправляем файлы напрямую — сервер перешлёт в Telegram
+      selectedFiles.forEach(file => fd.append("files", file));
       const res = await fetch(`${import.meta.env.BASE_URL}api/order`, { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
@@ -478,13 +472,26 @@ export default function Order() {
                 )}
 
                 {selectedFiles.length === 0 ? (
-                  <label htmlFor="file-upload" className="flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer border-border/40 hover:border-primary/50 hover:bg-primary/3 bg-card/20 group">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                      <UploadCloud className="w-7 h-7 text-primary/60 group-hover:text-primary transition-colors" />
+                  <label
+                    htmlFor="file-upload"
+                    className={`flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer bg-card/20 group ${isDragging ? "border-primary bg-primary/8 scale-[1.01]" : "border-border/40 hover:border-primary/50 hover:bg-primary/3"}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      addFiles(e.dataTransfer.files);
+                    }}
+                  >
+                    <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-colors ${isDragging ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20 group-hover:bg-primary/15"}`}>
+                      <UploadCloud className={`w-7 h-7 transition-colors ${isDragging ? "text-primary" : "text-primary/60 group-hover:text-primary"}`} />
                     </div>
                     <div className="text-center">
-                      <div className="text-sm font-semibold text-foreground/70 group-hover:text-foreground transition-colors">Нажмите или перетащите файлы</div>
-                      <div className="text-xs text-muted-foreground/60 mt-1">STL, OBJ, фото, чертежи · до 150 МБ · до 10 файлов</div>
+                      <div className="text-sm font-semibold text-foreground/70 group-hover:text-foreground transition-colors">
+                        {isDragging ? "Отпустите файлы здесь" : "Нажмите или перетащите файлы"}
+                      </div>
+                      <div className="text-xs text-muted-foreground/60 mt-1">STL, OBJ, фото, чертежи, PDF · до 150 МБ · до 10 файлов</div>
                     </div>
                     <div className="text-xs text-muted-foreground/40">Необязательно — можно описать задачу текстом</div>
                   </label>
