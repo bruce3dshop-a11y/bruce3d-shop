@@ -483,12 +483,13 @@ export default function Order() {
                   </div>
                 )}
 
-                {/* iOS Safari fix: input с opacity:0 покрывает всю область нажатия.
-                    Пользователь кликает напрямую по input — onChange гарантированно срабатывает.
-                    display:none ломает onChange на iOS Safari при .click() из JS. */}
                 {selectedFiles.length === 0 ? (
-                  <div
-                    className={`relative flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer bg-card/20 group overflow-hidden ${isDragging ? "border-primary bg-primary/8 scale-[1.01]" : "border-border/40 hover:border-primary/50 hover:bg-primary/3"}`}
+                  /* label напрямую оборачивает input — самый нативный HTML,
+                     работает на всех браузерах включая iOS Safari.
+                     input НЕ display:none (opacity-0 + sr-only-like), поэтому
+                     onChange срабатывает корректно. */
+                  <label
+                    className={`relative flex flex-col items-center justify-center gap-3 w-full py-10 px-4 transition-all border-2 border-dashed rounded-2xl cursor-pointer bg-card/20 group ${isDragging ? "border-primary bg-primary/8 scale-[1.01]" : "border-border/40 hover:border-primary/50 hover:bg-primary/3"}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
@@ -498,47 +499,43 @@ export default function Order() {
                       addFiles(e.dataTransfer.files);
                     }}
                   >
-                    {/* Прозрачный input поверх всей зоны — iOS Safari нативно его кликает */}
+                    {/* НЕ display:none — opacity:0 + position absolute не ломает iOS onChange */}
                     <input
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      style={{ position: "absolute", width: "1px", height: "1px", opacity: 0, overflow: "hidden" }}
                       onChange={(e) => {
-                        // Снимок ДО e.target.value = "" — iOS Safari инвалидирует FileList после сброса
                         const files = Array.from(e.target.files ?? []);
                         e.target.value = "";
                         addFiles(files);
                       }}
                     />
-                    <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-colors pointer-events-none ${isDragging ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20 group-hover:bg-primary/15"}`}>
+                    <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-colors ${isDragging ? "bg-primary/20 border-primary/40" : "bg-primary/10 border-primary/20 group-hover:bg-primary/15"}`}>
                       <UploadCloud className={`w-7 h-7 transition-colors ${isDragging ? "text-primary" : "text-primary/60 group-hover:text-primary"}`} />
                     </div>
-                    <div className="text-center pointer-events-none">
+                    <div className="text-center">
                       <div className="text-sm font-semibold text-foreground/70 group-hover:text-foreground transition-colors">
                         {isDragging ? "Отпустите файлы здесь" : "Нажмите или перетащите файлы"}
                       </div>
                       <div className="text-xs text-muted-foreground/60 mt-1">STL, 3MF, OBJ, GLB, PLY · фото, PDF, чертежи, архивы (ZIP, RAR) · любые файлы · до 150 МБ · до 10 шт</div>
                     </div>
-                    <div className="text-xs text-muted-foreground/40 pointer-events-none">Необязательно — можно описать задачу текстом</div>
-                  </div>
+                    <div className="text-xs text-muted-foreground/40">Необязательно — можно описать задачу текстом</div>
+                  </label>
                 ) : selectedFiles.length < 10 ? (
-                  /* Для кнопки "ещё файлы" — тот же overlay-подход */
-                  <div className="relative w-full h-10 rounded-xl border border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group">
+                  <label className="relative flex items-center justify-center gap-2 w-full h-10 transition-all border border-dashed rounded-xl cursor-pointer border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-sm text-primary/60 hover:text-primary">
                     <input
                       type="file"
                       multiple
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      style={{ position: "absolute", width: "1px", height: "1px", opacity: 0, overflow: "hidden" }}
                       onChange={(e) => {
                         const files = Array.from(e.target.files ?? []);
                         e.target.value = "";
                         addFiles(files);
                       }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-primary/60 group-hover:text-primary pointer-events-none">
-                      <Plus className="w-4 h-4" /> Добавить ещё файлы
-                    </div>
-                  </div>
+                    <Plus className="w-4 h-4" /> Добавить ещё файлы
+                  </label>
                 ) : null}
               </div>
             </StepCard>
