@@ -8,9 +8,9 @@ import * as z from "zod";
 import { Link } from "wouter";
 import {
   UploadCloud, Loader2, X, FileText, CheckCircle, ArrowRight,
-  MapPin, Truck, Package, Home as HomeIcon, Bike, Plus,
+  MapPin, Truck, Package, Home as HomeIcon, Plus,
   Printer, PenTool, ScanLine, Wrench, Phone, Mail, Send, User,
-  ChevronRight, Sparkles,
+  ChevronRight, Sparkles, Info, Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -22,17 +22,17 @@ import { uploadFilesToCloudinary } from "@/lib/cloudinary";
 import { useI18n } from "@/lib/i18n";
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: "Имя должно содержать минимум 2 символа." }),
-  phone: z.string().optional(),
-  email: z.string().email({ message: "Введите корректный email." }).optional().or(z.literal("")),
-  telegram: z.string().optional(),
-  serviceType: z.string().min(1, { message: "Выберите тип услуги." }),
-  material: z.string().min(1, { message: "Выберите материал." }),
-  description: z.string().min(10, { message: "Опишите ваш заказ подробнее (минимум 10 символов)." }),
-  deliveryType: z.string().default("pickup"),
-  deliveryCity: z.string().optional(),
-  deliveryAddress: z.string().optional(),
-  deliveryIndex: z.string().optional(),
+  name:              z.string().min(2, { message: "Имя должно содержать минимум 2 символа." }),
+  phone:             z.string().optional(),
+  email:             z.string().email({ message: "Введите корректный email." }).optional().or(z.literal("")),
+  telegram:          z.string().optional(),
+  description:       z.string().min(10, { message: "Опишите ваш заказ подробнее (минимум 10 символов)." }),
+  deliveryType:      z.string().default("pickup"),
+  deliveryFullName:  z.string().optional(),
+  deliveryPhone:     z.string().optional(),
+  deliveryCity:      z.string().optional(),
+  deliveryAddress:   z.string().optional(),
+  deliveryIndex:     z.string().optional(),
 }).refine(
   (data) => data.phone || data.email || data.telegram,
   { message: "Укажите хотя бы один способ связи.", path: ["phone"] }
@@ -44,10 +44,10 @@ const MAX_FILE_SIZE = 150 * 1024 * 1024;
 function getExt(name: string) { return name.split(".").pop()?.toLowerCase() || ""; }
 
 const SERVICE_CARDS = [
-  { value: "3d-print",    icon: Printer,   label: "3D Печать",        desc: "FDM и смола",     color: "from-violet-500/20 to-purple-500/10",  border: "border-violet-500/40",  active: "bg-violet-500/15 border-violet-400/70 shadow-violet-500/20" },
-  { value: "3d-modeling", icon: PenTool,   label: "3D Моделирование", desc: "Любая сложность", color: "from-blue-500/20 to-cyan-500/10",       border: "border-blue-500/30",    active: "bg-blue-500/15 border-blue-400/70 shadow-blue-500/20" },
-  { value: "3d-scanning", icon: ScanLine,  label: "3D Сканирование",  desc: "Обратный инжиниринг", color: "from-cyan-500/20 to-teal-500/10", border: "border-cyan-500/30",    active: "bg-cyan-500/15 border-cyan-400/70 shadow-cyan-500/20" },
-  { value: "repair",      icon: Wrench,    label: "Ремонт техники",   desc: "Запчасти и корпуса", color: "from-orange-500/20 to-amber-500/10", border: "border-orange-500/30",  active: "bg-orange-500/15 border-orange-400/70 shadow-orange-500/20" },
+  { value: "3d-print",    icon: Printer,  label: "3D Печать",        desc: "FDM и смола",         color: "from-violet-500/20 to-purple-500/10",  border: "border-violet-500/40", active: "bg-violet-500/15 border-violet-400/70 shadow-violet-500/20" },
+  { value: "3d-modeling", icon: PenTool,  label: "3D Моделирование", desc: "Любая сложность",     color: "from-blue-500/20 to-cyan-500/10",       border: "border-blue-500/30",   active: "bg-blue-500/15 border-blue-400/70 shadow-blue-500/20" },
+  { value: "3d-scanning", icon: ScanLine, label: "3D Сканирование",  desc: "Обратный инжиниринг", color: "from-cyan-500/20 to-teal-500/10",       border: "border-cyan-500/30",   active: "bg-cyan-500/15 border-cyan-400/70 shadow-cyan-500/20" },
+  { value: "repair",      icon: Wrench,   label: "Ремонт техники",   desc: "Запчасти и корпуса",  color: "from-orange-500/20 to-amber-500/10",    border: "border-orange-500/30", active: "bg-orange-500/15 border-orange-400/70 shadow-orange-500/20" },
 ];
 
 const MATERIAL_CHIPS = [
@@ -60,10 +60,10 @@ const MATERIAL_CHIPS = [
 ];
 
 const DELIVERY_OPTS = [
-  { value: "pickup",  icon: HomeIcon, label: "Самовывоз",      desc: "Адрес у продавца" },
-  { value: "cdek",    icon: Package,  label: "СДЭК",           desc: "По тарифам СДЭК" },
-  { value: "post",    icon: Truck,    label: "Почта России",   desc: "По тарифам Почты" },
-  { value: "courier", icon: Bike,     label: "Курьер",         desc: "Москва и МО" },
+  { value: "pickup", icon: HomeIcon, label: "Самовывоз",     desc: "Адрес у продавца" },
+  { value: "cdek",   icon: Package,  label: "СДЭК",          desc: "По тарифам СДЭК" },
+  { value: "post",   icon: Truck,    label: "Почта России",  desc: "По тарифам Почты" },
+  { value: "yandex", icon: Zap,      label: "Яндекс",        desc: "Москва и МО" },
 ];
 
 function StepCard({ num, title, children, error }: { num: string; title: string; children: React.ReactNode; error?: boolean }) {
@@ -127,12 +127,32 @@ export default function Order() {
   const [showInstruction, setShowInstruction] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Multi-select states
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [serviceError, setServiceError] = useState(false);
+  const [materialError, setMaterialError] = useState(false);
+
+  function toggleService(value: string) {
+    setServiceError(false);
+    setSelectedServices(prev =>
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  }
+
+  function toggleMaterial(value: string) {
+    setMaterialError(false);
+    setSelectedMaterials(prev =>
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  }
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: user?.name || "", phone: user?.phone || "", email: user?.email || "", telegram: user?.telegram || "",
-      serviceType: "", material: "", description: "",
-      deliveryType: "pickup", deliveryCity: "", deliveryAddress: "", deliveryIndex: "",
+      description: "",
+      deliveryType: "pickup", deliveryFullName: "", deliveryPhone: "", deliveryCity: "", deliveryAddress: "", deliveryIndex: "",
     },
   });
 
@@ -153,10 +173,22 @@ export default function Order() {
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Validate multi-selects
+    let hasError = false;
+    if (selectedServices.length === 0) { setServiceError(true); hasError = true; }
+    if (selectedMaterials.length === 0) { setMaterialError(true); hasError = true; }
+    if (hasError) {
+      toast({ title: "Заполните все поля", description: "Выберите хотя бы одну услугу и один материал.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const fd = new FormData();
       Object.entries(values).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
+      fd.append("serviceType", selectedServices.join(", "));
+      fd.append("material", selectedMaterials.join(", "));
+
       if (selectedFiles.length > 0) {
         const uploaded = await uploadFilesToCloudinary(selectedFiles, "orders");
         if (uploaded.length > 0) {
@@ -171,6 +203,8 @@ export default function Order() {
       setSuccess({ orderNumber: data.orderNumber, orderId: data.orderId });
       form.reset();
       setSelectedFiles([]);
+      setSelectedServices([]);
+      setSelectedMaterials([]);
     } catch {
       toast({ title: "Ошибка отправки", description: "Не удалось отправить заказ. Попробуйте ещё раз.", variant: "destructive" });
     } finally {
@@ -316,80 +350,94 @@ export default function Order() {
               </div>
             </StepCard>
 
-            {/* ── 02 Услуга ── */}
-            <StepCard num="02" title="Тип услуги" error={!!form.formState.errors.serviceType}>
-              <FormField control={form.control} name="serviceType" render={({ field }) => (
-                <FormItem>
-                  <div className="grid grid-cols-2 gap-3">
-                    {SERVICE_CARDS.map(({ value, icon: Icon, label, desc, color, border, active }) => {
-                      const isSelected = field.value === value;
-                      return (
-                        <button
-                          key={value} type="button"
-                          onClick={() => field.onChange(value)}
-                          className={`relative group flex flex-col items-start gap-2 p-4 rounded-2xl border text-left transition-all duration-200 overflow-hidden ${
-                            isSelected
-                              ? `${active} shadow-lg`
-                              : `border-border/40 hover:border-primary/30 bg-card/30 hover:bg-card/50`
-                          }`}
-                        >
-                          {!isSelected && (
-                            <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-100 transition-opacity`} />
-                          )}
-                          {isSelected && (
-                            <div className={`absolute inset-0 bg-gradient-to-br ${color}`} />
-                          )}
-                          <div className="relative">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                              isSelected ? "bg-white/10" : "bg-muted/50 group-hover:bg-white/5"
-                            }`}>
-                              <Icon className={`w-4.5 h-4.5 ${isSelected ? "text-white" : "text-muted-foreground group-hover:text-foreground"}`} style={{ width: 18, height: 18 }} />
-                            </div>
+            {/* ── 02 Услуга (мультивыбор) ── */}
+            <StepCard num="02" title="Тип услуги" error={serviceError}>
+              <div className="space-y-2">
+                {serviceError && (
+                  <p className="text-xs text-red-400 flex items-center gap-1">
+                    <Info className="w-3 h-3" /> Выберите хотя бы одну услугу
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {SERVICE_CARDS.map(({ value, icon: Icon, label, desc, color, active }) => {
+                    const isSelected = selectedServices.includes(value);
+                    return (
+                      <button
+                        key={value} type="button"
+                        onClick={() => toggleService(value)}
+                        className={`relative group flex flex-col items-start gap-2 p-4 rounded-2xl border text-left transition-all duration-200 overflow-hidden ${
+                          isSelected
+                            ? `${active} shadow-lg`
+                            : `border-border/40 hover:border-primary/30 bg-card/30 hover:bg-card/50`
+                        }`}
+                      >
+                        {!isSelected && (
+                          <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                        )}
+                        {isSelected && (
+                          <div className={`absolute inset-0 bg-gradient-to-br ${color}`} />
+                        )}
+                        <div className="relative">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                            isSelected ? "bg-white/10" : "bg-muted/50 group-hover:bg-white/5"
+                          }`}>
+                            <Icon className={`w-4.5 h-4.5 ${isSelected ? "text-white" : "text-muted-foreground group-hover:text-foreground"}`} style={{ width: 18, height: 18 }} />
                           </div>
-                          <div className="relative">
-                            <div className={`text-sm font-bold leading-tight ${isSelected ? "text-white" : "text-foreground"}`}>{label}</div>
-                            <div className={`text-xs mt-0.5 ${isSelected ? "text-white/70" : "text-muted-foreground"}`}>{desc}</div>
+                        </div>
+                        <div className="relative">
+                          <div className={`text-sm font-bold leading-tight ${isSelected ? "text-white" : "text-foreground"}`}>{label}</div>
+                          <div className={`text-xs mt-0.5 ${isSelected ? "text-white/70" : "text-muted-foreground"}`}>{desc}</div>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-2.5 right-2.5">
+                            <CheckCircle className="w-4 h-4 text-white/80" />
                           </div>
-                          {isSelected && (
-                            <div className="absolute top-2.5 right-2.5">
-                              <CheckCircle className="w-4 h-4 text-white/80" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedServices.length > 0 && (
+                  <p className="text-xs text-primary/70 pt-1">
+                    Выбрано: {selectedServices.map(v => SERVICE_CARDS.find(s => s.value === v)?.label).join(", ")}
+                  </p>
+                )}
+              </div>
             </StepCard>
 
-            {/* ── 03 Материал ── */}
-            <StepCard num="03" title="Материал" error={!!form.formState.errors.material}>
-              <FormField control={form.control} name="material" render={({ field }) => (
-                <FormItem>
-                  <div className="flex flex-wrap gap-2">
-                    {MATERIAL_CHIPS.map(({ value, label, sub }) => {
-                      const isSelected = field.value === value;
-                      return (
-                        <button
-                          key={value} type="button"
-                          onClick={() => field.onChange(value)}
-                          className={`flex flex-col items-center px-4 py-2.5 rounded-xl border text-center transition-all duration-200 min-w-[72px] ${
-                            isSelected
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105"
-                              : "border-border/50 bg-card/40 hover:border-primary/40 hover:bg-primary/5"
-                          }`}
-                        >
-                          <span className={`text-sm font-bold ${isSelected ? "text-white" : "text-foreground"}`}>{label}</span>
-                          <span className={`text-[10px] mt-0.5 leading-tight ${isSelected ? "text-white/70" : "text-muted-foreground"}`}>{sub}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )} />
+            {/* ── 03 Материал (мультивыбор) ── */}
+            <StepCard num="03" title="Материал" error={materialError}>
+              <div className="space-y-2">
+                {materialError && (
+                  <p className="text-xs text-red-400 flex items-center gap-1">
+                    <Info className="w-3 h-3" /> Выберите хотя бы один материал
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {MATERIAL_CHIPS.map(({ value, label, sub }) => {
+                    const isSelected = selectedMaterials.includes(value);
+                    return (
+                      <button
+                        key={value} type="button"
+                        onClick={() => toggleMaterial(value)}
+                        className={`flex flex-col items-center px-4 py-2.5 rounded-xl border text-center transition-all duration-200 min-w-[72px] ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105"
+                            : "border-border/50 bg-card/40 hover:border-primary/40 hover:bg-primary/5"
+                        }`}
+                      >
+                        <span className={`text-sm font-bold ${isSelected ? "text-white" : "text-foreground"}`}>{label}</span>
+                        <span className={`text-[10px] mt-0.5 leading-tight ${isSelected ? "text-white/70" : "text-muted-foreground"}`}>{sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedMaterials.length > 0 && (
+                  <p className="text-xs text-primary/70 pt-1">
+                    Выбрано: {selectedMaterials.map(v => MATERIAL_CHIPS.find(m => m.value === v)?.label).join(", ")}
+                  </p>
+                )}
+              </div>
             </StepCard>
 
             {/* ── 04 Описание ── */}
@@ -481,33 +529,95 @@ export default function Order() {
                   </div>
                   <FormMessage />
 
-                  <AnimatePresence>
-                    {deliveryType !== "pickup" && (
+                  <AnimatePresence mode="wait">
+                    {deliveryType === "pickup" ? (
                       <motion.div
+                        key="pickup-info"
+                        initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                          <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                          <div>
+                            <div className="text-sm font-semibold text-foreground mb-0.5">Адрес самовывоза</div>
+                            <div className="text-xs text-muted-foreground leading-relaxed">
+                              Адрес для самовывоза уточните у продавца через мессенджер после подтверждения заказа. Мы свяжемся с вами и сообщим адрес и время.
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="delivery-fields"
                         initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden"
                       >
                         <div className="pt-4 space-y-3">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <MapPin className="w-3.5 h-3.5 text-primary" /> Адрес доставки
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground pb-1">
+                            <MapPin className="w-3.5 h-3.5 text-primary" />
+                            Данные для доставки
                           </div>
+
+                          {/* ФИО */}
+                          <FormField control={form.control} name="deliveryFullName" render={({ field }) => (
+                            <FormItem>
+                              <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <FormControl>
+                                  <Input placeholder="ФИО получателя *" {...field} className="pl-10 bg-background/60 border-border/50 h-10 rounded-xl text-sm focus:border-primary/50" />
+                                </FormControl>
+                              </div>
+                            </FormItem>
+                          )} />
+
+                          {/* Телефон */}
+                          <FormField control={form.control} name="deliveryPhone" render={({ field }) => (
+                            <FormItem>
+                              <div className="relative">
+                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                                <FormControl>
+                                  <Input placeholder="Телефон получателя *" {...field} className="pl-10 bg-background/60 border-border/50 h-10 rounded-xl text-sm focus:border-primary/50" />
+                                </FormControl>
+                              </div>
+                            </FormItem>
+                          )} />
+
+                          {/* Город + индекс */}
                           <div className="grid grid-cols-2 gap-3">
                             <FormField control={form.control} name="deliveryCity" render={({ field }) => (
                               <FormItem>
-                                <FormControl><Input placeholder="Город" {...field} className="bg-background/60 border-border/50 h-10 rounded-xl text-sm" /></FormControl>
+                                <FormControl>
+                                  <Input placeholder="Город" {...field} className="bg-background/60 border-border/50 h-10 rounded-xl text-sm" />
+                                </FormControl>
                               </FormItem>
                             )} />
                             <FormField control={form.control} name="deliveryIndex" render={({ field }) => (
                               <FormItem>
-                                <FormControl><Input placeholder="Индекс" {...field} className="bg-background/60 border-border/50 h-10 rounded-xl text-sm" /></FormControl>
+                                <FormControl>
+                                  <Input placeholder="Индекс" {...field} className="bg-background/60 border-border/50 h-10 rounded-xl text-sm" />
+                                </FormControl>
                               </FormItem>
                             )} />
                           </div>
+
+                          {/* Адрес ПВЗ / дома */}
                           <FormField control={form.control} name="deliveryAddress" render={({ field }) => (
                             <FormItem>
-                              <FormControl><Input placeholder="Улица, дом, квартира" {...field} className="bg-background/60 border-border/50 h-10 rounded-xl text-sm" /></FormControl>
+                              <FormControl>
+                                <Input
+                                  placeholder={deliveryType === "cdek" || deliveryType === "post" ? "Адрес ПВЗ или улица, дом, кв." : "Улица, дом, квартира"}
+                                  {...field}
+                                  className="bg-background/60 border-border/50 h-10 rounded-xl text-sm"
+                                />
+                              </FormControl>
                             </FormItem>
                           )} />
+
+                          <p className="text-xs text-muted-foreground/60">
+                            {deliveryType === "cdek" && "Стоимость доставки СДЭК рассчитывается после подтверждения заказа."}
+                            {deliveryType === "post" && "Стоимость доставки Почтой России рассчитывается после подтверждения заказа."}
+                            {deliveryType === "yandex" && "Яндекс Доставка — курьер по Москве и МО. Стоимость уточняется после подтверждения."}
+                          </p>
                         </div>
                       </motion.div>
                     )}
