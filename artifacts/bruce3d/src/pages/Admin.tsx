@@ -298,10 +298,12 @@ function OrdersTab() {
                       try {
                         const parsed = JSON.parse(order.file_name);
                         if (Array.isArray(parsed)) {
-                          fileUrls = parsed.map((u: string, i: number) => ({
-                            url: u,
-                            name: decodeURIComponent(u.split("/").pop()?.split("?")[0] || `file-${i + 1}`),
-                          }));
+                          fileUrls = parsed.map((item: any, i: number) => {
+                            if (typeof item === "string") {
+                              return { url: item, name: decodeURIComponent(item.split("/").pop()?.split("?")[0] || `file-${i + 1}`) };
+                            }
+                            return { url: item.url, name: item.name || decodeURIComponent((item.url || "").split("/").pop()?.split("?")[0] || `file-${i + 1}`) };
+                          });
                         } else {
                           fileUrls = [{ url: order.file_name, name: order.file_name }];
                         }
