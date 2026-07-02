@@ -200,13 +200,44 @@ export default function Order() {
 
     setIsSubmitting(true);
     try {
+      // Шаг 1: загружаем файлы напрямую в Cloudinary (минуя Railway)
+      const uploadedFileUrls: { url: string; originalName: string }[] = [];
+      if (selectedFiles.length > 0) {
+        // Получаем одну подпись для всех файлов
+        const sigRes = await fetch(`${import.meta.env.BASE_URL}api/upload/sign?folder=orders`, { credentials: "include" });
+        if (!sigRes.ok) throw new Error("Не удалось получить подпись для загрузки файлов");
+        const { signature, apiKey, cloudName, timestamp, folder } = await sigRes.json() as any;
+
+        for (const file of selectedFiles) {
+          const uploadFd = new FormData();
+          uploadFd.append("file", file);
+          uploadFd.append("folder", folder);
+          uploadFd.append("timestamp", timestamp);
+          uploadFd.append("api_key", apiKey);
+          uploadFd.append("signature", signature);
+
+          const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+            method: "POST",
+            body: uploadFd,
+          });
+          if (!uploadRes.ok) {
+            const errData = await uploadRes.json().catch(() => ({})) as any;
+            throw new Error(errData?.error?.message || "Ошибка загрузки файла: " + file.name);
+          }
+          const uploadData = await uploadRes.json() as any;
+          uploadedFileUrls.push({ url: uploadData.secure_url as string, originalName: file.name });
+        }
+      }
+
+      // Шаг 2: отправляем заказ с URL файлов (без сырых бинарных данных)
       const fd = new FormData();
       Object.entries(values).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
       fd.append("serviceType", selectedServices.join(", "));
       fd.append("material", selectedMaterials.join(", "));
+      if (uploadedFileUrls.length > 0) {
+        fd.append("fileUrls", JSON.stringify(uploadedFileUrls));
+      }
 
-      // Отправляем файлы напрямую — сервер перешлёт в Telegram
-      selectedFiles.forEach(file => fd.append("files", file));
       const res = await fetch(`${import.meta.env.BASE_URL}api/order`, { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
@@ -215,8 +246,11 @@ export default function Order() {
       setSelectedFiles([]);
       setSelectedServices([]);
       setSelectedMaterials([]);
-    } catch {
-      toast({ title: "Ошибка отправки", description: "Не удалось отправить заказ. Попробуйте ещё раз.", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.message && !err.message.includes("Server error")
+        ? err.message
+        : "Не удалось отправить заказ. Попробуйте ещё раз.";
+      toast({ title: "Ошибка отправки", description: msg, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
