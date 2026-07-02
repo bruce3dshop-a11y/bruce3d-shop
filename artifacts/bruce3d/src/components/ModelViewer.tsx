@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { ThreeMFLoader } from "three/examples/jsm/loaders/3MFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 
@@ -98,11 +101,24 @@ export default function ModelViewer({ file }: ModelViewerProps) {
       controls.update();
     };
 
+    const applyDefaultMaterial = (object: THREE.Object3D) => {
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          // Keep original materials for GLTF/3MF if they have them, otherwise use default
+          if (!child.material || Array.isArray(child.material) ? false : !(child.material as THREE.MeshStandardMaterial).map) {
+            child.material = material;
+          }
+        }
+      });
+    };
+
     const animate = () => {
       animId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
     };
+
+    const onError = () => { setError(true); setLoading(false); };
 
     if (ext === "stl") {
       const loader = new STLLoader();
@@ -117,7 +133,7 @@ export default function ModelViewer({ file }: ModelViewerProps) {
           animate();
         },
         undefined,
-        () => { setError(true); setLoading(false); }
+        onError
       );
     } else if (ext === "obj") {
       const loader = new OBJLoader();
@@ -133,7 +149,57 @@ export default function ModelViewer({ file }: ModelViewerProps) {
           animate();
         },
         undefined,
-        () => { setError(true); setLoading(false); }
+        onError
+      );
+    } else if (ext === "ply") {
+      const loader = new PLYLoader();
+      loader.load(
+        url,
+        (geometry) => {
+          geometry.computeVertexNormals();
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+          fitCamera(mesh);
+          setLoading(false);
+          animate();
+        },
+        undefined,
+        onError
+      );
+    } else if (ext === "glb" || ext === "gltf") {
+      const loader = new GLTFLoader();
+      loader.load(
+        url,
+        (gltf) => {
+          const model = gltf.scene;
+          // Apply purple material to meshes without textures
+          model.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              const mat = child.material as THREE.MeshStandardMaterial;
+              if (!mat.map) child.material = material;
+            }
+          });
+          scene.add(model);
+          fitCamera(model);
+          setLoading(false);
+          animate();
+        },
+        undefined,
+        onError
+      );
+    } else if (ext === "3mf") {
+      const loader = new ThreeMFLoader();
+      loader.load(
+        url,
+        (group) => {
+          applyDefaultMaterial(group);
+          scene.add(group);
+          fitCamera(group);
+          setLoading(false);
+          animate();
+        },
+        undefined,
+        onError
       );
     } else {
       setLoading(false);

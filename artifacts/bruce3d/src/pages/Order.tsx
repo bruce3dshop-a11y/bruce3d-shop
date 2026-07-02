@@ -37,10 +37,22 @@ const formSchema = z.object({
   { message: "Укажите хотя бы один способ связи.", path: ["phone"] }
 );
 
-const MODEL_EXTS = new Set(["stl", "obj"]);
+// Форматы 3D-моделей с поддержкой предпросмотра
+const MODEL_EXTS = new Set(["stl", "obj", "3mf", "glb", "gltf", "ply"]);
+// Архивы и все остальные форматы — загружаются без ограничений
 const MAX_FILE_SIZE = 150 * 1024 * 1024;
 
 function getExt(name: string) { return name.split(".").pop()?.toLowerCase() || ""; }
+
+function getFileIcon(ext: string): string {
+  if (MODEL_EXTS.has(ext)) return "🧊";
+  if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(ext)) return "🗜️";
+  if (["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tiff"].includes(ext)) return "🖼️";
+  if (["pdf"].includes(ext)) return "📄";
+  if (["dwg", "dxf", "step", "stp", "iges", "igs", "f3d", "f3z", "fcstd"].includes(ext)) return "📐";
+  if (["mp4", "mov", "avi", "mkv"].includes(ext)) return "🎬";
+  return "📎";
+}
 
 const SERVICE_CARDS = [
   { value: "3d-print",    icon: Printer,  label: "3D Печать",        desc: "FDM и смола",         color: "from-violet-500/20 to-purple-500/10",  border: "border-violet-500/40", active: "bg-violet-500/15 border-violet-400/70 shadow-violet-500/20" },
@@ -85,12 +97,13 @@ function StepCard({ num, title, children, error }: { num: string; title: string;
 function FileItem({ file, onRemove }: { file: File; onRemove: () => void }) {
   const ext = getExt(file.name);
   const isModel = MODEL_EXTS.has(ext);
+  const icon = getFileIcon(ext);
   const [showPreview, setShowPreview] = useState(false);
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
       <div className="flex items-center gap-3 px-3 py-2.5">
-        <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-          <FileText className="w-3.5 h-3.5 text-primary" />
+        <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0 text-sm">
+          {icon}
         </div>
         <span className="text-sm text-foreground truncate flex-1">{file.name}</span>
         <span className="text-xs text-muted-foreground shrink-0">{(file.size / 1024 / 1024).toFixed(1)} МБ</span>
@@ -491,7 +504,7 @@ export default function Order() {
                       <div className="text-sm font-semibold text-foreground/70 group-hover:text-foreground transition-colors">
                         {isDragging ? "Отпустите файлы здесь" : "Нажмите или перетащите файлы"}
                       </div>
-                      <div className="text-xs text-muted-foreground/60 mt-1">STL, OBJ, фото, чертежи, PDF · до 150 МБ · до 10 файлов</div>
+                      <div className="text-xs text-muted-foreground/60 mt-1">STL, 3MF, OBJ, GLB, PLY · фото, PDF, чертежи, архивы (ZIP, RAR) · любые файлы · до 150 МБ · до 10 шт</div>
                     </div>
                     <div className="text-xs text-muted-foreground/40">Необязательно — можно описать задачу текстом</div>
                   </label>
