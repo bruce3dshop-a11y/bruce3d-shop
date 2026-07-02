@@ -353,6 +353,30 @@ function OrdersTab() {
                         </div>
                       );
                     })()}
+                    {/* Контакты */}
+                    {(order.phone || order.telegram || order.email) && (
+                      <div className="rounded-xl bg-muted/20 border border-border/30 p-3">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">👤 Контакты</p>
+                        <div className="space-y-1.5">
+                          {order.phone && (
+                            <a href={`tel:${order.phone}`} className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors">
+                              <span>📞</span> {order.phone}
+                            </a>
+                          )}
+                          {order.telegram && (
+                            <a href={`https://t.me/${order.telegram.replace("@", "")}`} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium">
+                              <span>✈️</span> {order.telegram}
+                            </a>
+                          )}
+                          {order.email && (
+                            <a href={`mailto:${order.email}`} className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors">
+                              <span>✉️</span> {order.email}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {/* Полное описание */}
                     {order.description && (
                       <div className="rounded-xl bg-muted/20 border border-border/30 p-3">
