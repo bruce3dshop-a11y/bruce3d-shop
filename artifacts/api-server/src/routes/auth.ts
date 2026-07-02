@@ -88,13 +88,22 @@ import { Router } from "express";
   router.post("/admin-login", async (req, res) => {
     try {
       const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+      const ADMIN_LOGIN_ENV = process.env.ADMIN_LOGIN;
       if (!ADMIN_PASSWORD) {
         return res.status(503).json({ error: "ADMIN_PASSWORD не задан на сервере. Установите его в Railway." });
       }
-      const { password } = req.body;
+      const { login, password } = req.body;
+      // Проверяем логин, если задана переменная ADMIN_LOGIN
+      if (ADMIN_LOGIN_ENV) {
+        const _la = createHmac("sha256", "bruce3d-login-check").update(String(login ?? "")).digest();
+        const _lb = createHmac("sha256", "bruce3d-login-check").update(String(ADMIN_LOGIN_ENV)).digest();
+        if (_la.length !== _lb.length || !timingSafeEqual(_la, _lb)) {
+          return res.status(401).json({ error: "Неверный логин или пароль" });
+        }
+      }
       const _a = createHmac("sha256", "bruce3d-check").update(String(password)).digest();
       const _b = createHmac("sha256", "bruce3d-check").update(String(ADMIN_PASSWORD)).digest();
-      if (!timingSafeEqual(_a, _b)) return res.status(401).json({ error: "Неверный пароль" });
+      if (!timingSafeEqual(_a, _b)) return res.status(401).json({ error: "Неверный логин или пароль" });
 
       // Set cookie (works same-domain; may not work cross-domain with SameSite=lax)
       setAdminSession(res);
