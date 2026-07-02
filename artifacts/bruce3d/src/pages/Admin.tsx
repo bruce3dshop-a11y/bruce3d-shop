@@ -22,6 +22,7 @@ interface Order {
   id: number; order_number: string; name: string; email?: string; phone?: string;
   telegram?: string; service_type: string; material: string; status: string;
   price?: string; payment_link?: string; delivery_type: string;
+  delivery_city?: string; delivery_address?: string; delivery_index?: string;
   created_at: string; description: string; file_name?: string;
 }
 interface Client {
@@ -62,15 +63,16 @@ const serviceLabels: Record<string, string> = {
 
 // ====== LOGIN ======
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
+  const [loginVal, setLoginVal] = useState("");
   const [pwd, setPwd] = useState("");
   const { toast } = useToast();
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiFetch("auth/admin-login", { method: "POST", body: JSON.stringify({ password: pwd }) });
+      await apiFetch("auth/admin-login", { method: "POST", body: JSON.stringify({ login: loginVal, password: pwd }) });
       onLogin();
       toast({ title: "Вы вошли как администратор" });
-    } catch { toast({ title: "Неверный пароль", variant: "destructive" }); }
+    } catch { toast({ title: "Неверный логин или пароль", variant: "destructive" }); }
   };
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
@@ -87,8 +89,12 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
             <p className="text-sm text-muted-foreground mt-1">BRUCE 3D SHOP</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-3">
+            <Input type="text" placeholder="Логин администратора" value={loginVal}
+              onChange={e => setLoginVal(e.target.value)} autoComplete="username"
+              className="bg-background/50 h-11 rounded-xl border-border/40 focus:border-primary/50" />
             <Input type="password" placeholder="Пароль администратора" value={pwd}
-              onChange={e => setPwd(e.target.value)} className="bg-background/50 h-11 rounded-xl border-border/40 focus:border-primary/50" />
+              onChange={e => setPwd(e.target.value)} autoComplete="current-password"
+              className="bg-background/50 h-11 rounded-xl border-border/40 focus:border-primary/50" />
             <Button type="submit" className="w-full h-11 rounded-xl font-bold shadow-lg shadow-primary/30">
               <Shield className="w-4 h-4 mr-2" /> Войти
             </Button>
@@ -347,6 +353,29 @@ function OrdersTab() {
                         </div>
                       );
                     })()}
+                    {/* Полное описание */}
+                    {order.description && (
+                      <div className="rounded-xl bg-muted/20 border border-border/30 p-3">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">📝 Описание</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{order.description}</p>
+                      </div>
+                    )}
+                    {/* Детали доставки */}
+                    {(order.delivery_type || order.delivery_city || order.delivery_address || order.delivery_index) && (
+                      <div className="rounded-xl bg-muted/20 border border-border/30 p-3">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">📦 Доставка</p>
+                        <div className="space-y-1 text-sm">
+                          {order.delivery_type && (
+                            <p className="text-foreground font-medium">
+                              {({ pickup: "🏠 Самовывоз", cdek: "📦 СДЭК", post: "✉️ Почта России", courier: "🚗 Курьер" } as Record<string,string>)[order.delivery_type] ?? order.delivery_type}
+                            </p>
+                          )}
+                          {order.delivery_city && <p className="text-muted-foreground">🏙 {order.delivery_city}</p>}
+                          {order.delivery_address && <p className="text-muted-foreground">📍 {order.delivery_address}</p>}
+                          {order.delivery_index && <p className="text-muted-foreground">📮 Индекс: {order.delivery_index}</p>}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Изменить статус</p>
                       <div className="flex flex-wrap gap-2">
