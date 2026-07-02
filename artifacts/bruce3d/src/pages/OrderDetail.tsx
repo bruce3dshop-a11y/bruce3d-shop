@@ -19,7 +19,7 @@ import { useState, useEffect, useRef } from "react";
       id: number; order_number: string; name: string; status: string;
       price?: number; payment_link?: string;
       service_type: string; material: string; description: string;
-      delivery_type: string; created_at: string;
+      delivery_type: string; created_at: string; file_name?: string;
     };
     paymentPaid: boolean;
     history: StatusEntry[];
@@ -337,6 +337,43 @@ import { useState, useEffect, useRef } from "react";
                     <p className="text-muted-foreground mb-1">Описание:</p>
                     <p className="text-foreground">{order.description}</p>
                   </div>
+                  {order.file_name && (() => {
+                    let files: { url: string; name: string }[] = [];
+                    try {
+                      const parsed = JSON.parse(order.file_name);
+                      if (Array.isArray(parsed)) {
+                        files = parsed.map((item: any, i: number) => {
+                          if (typeof item === "string") {
+                            return { url: item, name: decodeURIComponent(item.split("/").pop()?.split("?")[0] || `файл-${i + 1}`) };
+                          }
+                          return { url: item.url, name: item.name || decodeURIComponent((item.url || "").split("/").pop()?.split("?")[0] || `файл-${i + 1}`) };
+                        });
+                      }
+                    } catch {}
+                    if (files.length === 0) return null;
+                    return (
+                      <div className="pt-2 border-t border-border/30">
+                        <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-sm">
+                          <Paperclip className="w-3.5 h-3.5" /> Прикреплённые файлы ({files.length})
+                        </p>
+                        <div className="space-y-1.5">
+                          {files.map((f, i) => (
+                            <a
+                              key={i}
+                              href={f.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={f.name}
+                              className="flex items-center gap-2 text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg px-3 py-2 transition-colors group"
+                            >
+                              <Download className="w-3.5 h-3.5 text-primary shrink-0 group-hover:scale-110 transition-transform" />
+                              <span className="text-foreground truncate">{f.name}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 
