@@ -128,6 +128,37 @@ export async function sendTelegramPhoto(
   }
 }
 
+/** Отправляет файл из буфера напрямую в Telegram — не нужен Cloudinary */
+export async function sendTelegramDocumentBuffer(
+  chatId: string | number,
+  buffer: Buffer,
+  filename: string,
+  caption?: string
+): Promise<boolean> {
+  if (!token()) return false;
+  try {
+    const formData = new FormData();
+    formData.append("chat_id", String(chatId));
+    if (caption) {
+      formData.append("caption", caption);
+      formData.append("parse_mode", "HTML");
+    }
+    const blob = new Blob([buffer]);
+    formData.append("document", blob, filename);
+
+    const r = await fetch(`${api()}/sendDocument`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await r.json() as { ok: boolean; description?: string };
+    if (!data.ok) console.error("[sendTelegramDocumentBuffer] TG error:", data.description, "file:", filename);
+    return data.ok;
+  } catch (e) {
+    console.error("Telegram sendDocumentBuffer error:", e);
+    return false;
+  }
+}
+
 export async function getTelegramFileUrl(fileId: string): Promise<string | null> {
   if (!token()) return null;
   try {
@@ -142,7 +173,6 @@ export async function getTelegramFileUrl(fileId: string): Promise<string | null>
 
 export async function registerWebhook(domain: string) {
   if (!token()) return { ok: false, error: "No bot token" };
-  // Strip any protocol prefix the user may have accidentally included
   const cleanDomain = domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
   const url = `https://${cleanDomain}/api/webhook/telegram`;
   const r = await fetch(`${api()}/setWebhook`, {
@@ -164,31 +194,30 @@ export async function getBotInfo() {
   }
 }
 
-  export async function sendTelegramDocumentByUrl(
-    chatId: string | number,
-    fileUrl: string,
-    caption?: string
-  ): Promise<boolean> {
-    if (!token()) return false;
-    try {
-      const body: Record<string, unknown> = {
-        chat_id: String(chatId),
-        document: fileUrl,
-      };
-      if (caption) {
-        body.caption = caption;
-        body.parse_mode = "HTML";
-      }
-      const r = await fetch(`${api()}/sendDocument`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await r.json() as { ok: boolean };
-      return data.ok;
-    } catch (e) {
-      console.error("Telegram sendDocumentByUrl error:", e);
-      return false;
+export async function sendTelegramDocumentByUrl(
+  chatId: string | number,
+  fileUrl: string,
+  caption?: string
+): Promise<boolean> {
+  if (!token()) return false;
+  try {
+    const body: Record<string, unknown> = {
+      chat_id: String(chatId),
+      document: fileUrl,
+    };
+    if (caption) {
+      body.caption = caption;
+      body.parse_mode = "HTML";
     }
+    const r = await fetch(`${api()}/sendDocument`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json() as { ok: boolean };
+    return data.ok;
+  } catch (e) {
+    console.error("Telegram sendDocumentByUrl error:", e);
+    return false;
   }
-  
+}
