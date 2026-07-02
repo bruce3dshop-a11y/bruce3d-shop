@@ -93,7 +93,7 @@ import { Router } from "express";
         id: number; order_number: string; name: string; phone?: string | null;
         telegram?: string | null; email?: string | null;
         service_type: string; material: string; description: string; delivery_type?: string | null;
-        delivery_city?: string | null; delivery_address?: string | null;
+        delivery_city?: string | null; delivery_address?: string | null; delivery_index?: string | null;
       },
       fileUrls?: { url: string; originalName: string }[],
       rawFileCount?: number
@@ -108,18 +108,25 @@ import { Router } from "express";
         order.email && `✉️ ${order.email}`,
       ].filter(Boolean).join("\n");
 
-      const delivery = [
-        order.delivery_type && order.delivery_type !== "pickup" && order.delivery_city && `🏙 ${order.delivery_city}`,
-        order.delivery_address && `📍 ${order.delivery_address}`,
-      ].filter(Boolean).join("\n") || "самовывоз";
+      const deliveryTypeLabel: Record<string, string> = {
+        pickup: "🏠 Самовывоз", cdek: "📦 СДЭК", post: "✉️ Почта России", courier: "🚗 Курьер",
+      };
+      const deliveryLine = order.delivery_type === "pickup"
+        ? "🏠 Самовывоз"
+        : [
+          deliveryTypeLabel[order.delivery_type ?? ""] || (order.delivery_type ? `📦 ${order.delivery_type}` : null),
+          order.delivery_city && `🏙 ${order.delivery_city}`,
+          order.delivery_address && `📍 ${order.delivery_address}`,
+          order.delivery_index && `📮 ${order.delivery_index}`,
+        ].filter(Boolean).join("\n") || "🏠 Самовывоз";
 
       const fileCount = fileUrls?.length || 0;
       const fileNote = fileCount === 1
-        ? `\n📎 Файл: <a href="${fileUrls![0].url}">${fileUrls![0].originalName}</a>`
+        ? `\n\n📎 Файл: <a href="${fileUrls![0].url}">${fileUrls![0].originalName}</a>`
         : fileCount > 1
-        ? `\n📎 Файлов: ${fileCount}\n${fileUrls!.map(f => `• <a href="${f.url}">${f.originalName}</a>`).join("\n")}`
+        ? `\n\n📎 Файлов: ${fileCount}\n${fileUrls!.map(f => `• <a href="${f.url}">${f.originalName}</a>`).join("\n")}`
         : rawFileCount && rawFileCount > 0
-        ? `\n📎 Файлов: ${rawFileCount} (прикреплены следующими сообщениями)`
+        ? `\n\n📎 Файлов: ${rawFileCount} (прикреплены следующими сообщениями)`
         : "";
 
       const siteUrl = getSiteUrl();
@@ -127,16 +134,19 @@ import { Router } from "express";
         ? `\n\n🖥 <a href="${siteUrl}/admin">Открыть панель → Заказ #${order.order_number}</a>`
         : "";
 
+      const sep = "━━━━━━━━━━━━━━━━━━";
       const text = `🆕 <b>Новый заказ #${order.order_number}</b>
 
 👤 <b>${order.name}</b>
 ${contact}
-
-🔧 Услуга: ${service}
-🧱 Материал: ${order.material.toUpperCase()}
-📦 Доставка: ${delivery}${fileNote}
-
-📝 ${order.description.slice(0, 500)}${order.description.length > 500 ? "..." : ""}${adminLink}`;
+${sep}
+🔧 <b>Услуга:</b> ${service}
+🧱 <b>Материал:</b> ${order.material.toUpperCase()}
+${deliveryLine}
+${sep}
+📝 <b>Описание:</b>
+${order.description.slice(0, 800)}${order.description.length > 800 ? "..." : ""}${fileNote}
+${sep}${adminLink}`;
 
       await sendTelegram(chatId, text);
     }
