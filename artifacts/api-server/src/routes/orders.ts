@@ -94,6 +94,7 @@ import { Router } from "express";
         telegram?: string | null; email?: string | null;
         service_type: string; material: string; description: string; delivery_type?: string | null;
         delivery_city?: string | null; delivery_address?: string | null; delivery_index?: string | null;
+        delivery_full_name?: string | null; delivery_phone?: string | null;
       },
       fileUrls?: { url: string; originalName: string }[],
       rawFileCount?: number
@@ -115,6 +116,8 @@ import { Router } from "express";
         ? "🏠 Самовывоз"
         : [
           deliveryTypeLabel[order.delivery_type ?? ""] || (order.delivery_type ? `📦 ${order.delivery_type}` : null),
+          order.delivery_full_name && `👤 ${order.delivery_full_name}`,
+          order.delivery_phone && `📞 ${order.delivery_phone}`,
           order.delivery_city && `🏙 ${order.delivery_city}`,
           order.delivery_address && `📍 ${order.delivery_address}`,
           order.delivery_index && `📮 ${order.delivery_index}`,
@@ -156,7 +159,7 @@ ${sep}${adminLink}`;
         // Парсим multipart через busboy (multer@1.x несовместим с Express 5)
         const { fields, files: uploadedFiles } = await parseMultipart(req);
         const body = fields;
-        const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex } = body;
+        const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex, deliveryFullName, deliveryPhone } = body;
         if (!name || !serviceType || !material || !description) {
           return res.status(400).json({ error: "Missing required fields" });
         }
@@ -227,6 +230,8 @@ ${sep}${adminLink}`;
           delivery_city: deliveryCity,
           delivery_address: deliveryAddress,
           delivery_index: deliveryIndex,
+          delivery_full_name: deliveryFullName || null,
+          delivery_phone: deliveryPhone || null,
           status: "new",
         }).returning();
 
@@ -239,7 +244,7 @@ ${sep}${adminLink}`;
         // Notify Telegram — include raw file count if they'll be sent as separate messages
         const rawFilesToSend = uploadedFiles.length > 0 && fileUrls.length === 0 ? uploadedFiles : [];
         notifyTelegramNewOrder(
-          { ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress },
+          { ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress, delivery_full_name: deliveryFullName || null, delivery_phone: deliveryPhone || null },
           fileUrls,
           rawFilesToSend.length
         ).catch(console.error);
