@@ -122,76 +122,54 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-16">
             <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl">
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, duration: 0.7 }}
+                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
                 className="mb-6 flex items-center justify-center lg:justify-start"
               >
-                {/* ── Animated 3D Cube ── */}
-                <div className="relative flex items-center justify-center w-[260px] h-[260px]">
-                  {/* Outer ambient glow */}
-                  <div className="absolute inset-0 rounded-full bg-violet-600/20 blur-3xl" />
-                  <div className="absolute inset-8 rounded-full bg-primary/15 blur-2xl animate-pulse" />
+                {/* Floating logo in glowing circle */}
+                <div className="relative flex items-center justify-center w-[340px] h-[340px]">
+                  {/* Deep glow layers */}
+                  <div className="absolute inset-0 rounded-full bg-violet-700/25 blur-3xl" />
+                  <div className="absolute inset-10 rounded-full bg-primary/20 blur-2xl animate-pulse" />
 
-                  {/* CSS 3D rotating cube */}
-                  <div style={{ perspective: "700px" }} className="w-40 h-40">
-                    <motion.div
-                      animate={{ rotateY: 360, rotateX: [15, 15] }}
-                      transition={{ rotateY: { duration: 9, repeat: Infinity, ease: "linear" }, rotateX: { duration: 0 } }}
-                      style={{ transformStyle: "preserve-3d" }}
-                      className="w-full h-full relative"
-                    >
-                      {[
-                        { transform: "translateZ(80px)",                    label: "3D",    color: "#c084fc", bg: "rgba(147,51,234,0.12)"  },
-                        { transform: "rotateY(180deg) translateZ(80px)",    label: "PRINT", color: "#818cf8", bg: "rgba(99,102,241,0.12)"  },
-                        { transform: "rotateY(90deg) translateZ(80px)",     label: "SCAN",  color: "#22d3ee", bg: "rgba(6,182,212,0.12)"   },
-                        { transform: "rotateY(-90deg) translateZ(80px)",    label: "MODEL", color: "#f472b6", bg: "rgba(236,72,153,0.12)"  },
-                        { transform: "rotateX(90deg) translateZ(80px)",     label: "BRUCE", color: "#fbbf24", bg: "rgba(251,191,36,0.12)"  },
-                        { transform: "rotateX(-90deg) translateZ(80px)",    label: "SHOP",  color: "#4ade80", bg: "rgba(74,222,128,0.12)"  },
-                      ].map((face, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            transform: face.transform,
-                            border: `2px solid ${face.color}80`,
-                            background: face.bg,
-                            boxShadow: `inset 0 0 20px ${face.color}20`,
-                            backdropFilter: "blur(4px)",
-                            color: face.color,
-                          }}
-                          className="absolute inset-0 flex items-center justify-center font-black text-3xl tracking-widest"
-                        >
-                          {face.label}
-                        </div>
-                      ))}
-                    </motion.div>
-                  </div>
-
-                  {/* Orbiting ring */}
+                  {/* Rotating dashed orbit ring */}
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{ border: "1px dashed rgba(147,51,234,0.3)" }}
+                    transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-4 rounded-full pointer-events-none"
+                    style={{ border: "1px dashed rgba(147,51,234,0.35)" }}
                   />
+                  {/* Counter-rotating solid ring */}
                   <motion.div
                     animate={{ rotate: -360 }}
-                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-6 rounded-full pointer-events-none"
-                    style={{ border: "1px solid rgba(129,140,248,0.2)" }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ border: "1px solid rgba(192,132,252,0.18)" }}
                   />
 
-                  {/* Corner sparks */}
-                  {[0, 90, 180, 270].map((deg) => (
+                  {/* Orbit sparks */}
+                  {[0, 72, 144, 216, 288].map((deg, i) => (
                     <motion.div
                       key={deg}
-                      className="absolute w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_#9333ea]"
-                      animate={{ scale: [1, 1.6, 1], opacity: [0.6, 1, 0.6] }}
-                      transition={{ duration: 1.5 + deg / 200, repeat: Infinity, ease: "easeInOut" }}
+                      className="absolute w-2 h-2 rounded-full"
                       style={{
-                        top: `calc(50% + ${Math.sin((deg * Math.PI) / 180) * 118}px - 4px)`,
-                        left: `calc(50% + ${Math.cos((deg * Math.PI) / 180) * 118}px - 4px)`,
+                        background: ["#c084fc","#818cf8","#22d3ee","#f472b6","#4ade80"][i],
+                        boxShadow: `0 0 8px ${["#c084fc","#818cf8","#22d3ee","#f472b6","#4ade80"][i]}`,
+                        top: `calc(50% + ${Math.sin((deg * Math.PI) / 180) * 162}px - 4px)`,
+                        left: `calc(50% + ${Math.cos((deg * Math.PI) / 180) * 162}px - 4px)`,
                       }}
+                      animate={{ scale: [0.8, 1.5, 0.8], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2 + i * 0.4, repeat: Infinity, ease: "easeInOut" }}
                     />
                   ))}
+
+                  {/* The logo — floats up and down */}
+                  <motion.img
+                    src="/logo-wide.png"
+                    alt="BRUCE 3D SHOP — Killer Bunny™"
+                    animate={{ y: [0, -18, 0] }}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+                    className="relative z-10 w-[260px] drop-shadow-[0_0_50px_rgba(147,51,234,0.7)]"
+                  />
                 </div>
               </motion.div>
 
