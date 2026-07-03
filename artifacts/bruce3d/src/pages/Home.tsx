@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { VideoBackground } from "@/components/VideoBackground";
-import servicesImg from "@assets/IMG_3676_1782231561624.jpeg";
 
 const TELEGRAM_URL = "https://t.me/BRUCE_3D_SHOP_BOT";
 
@@ -269,7 +268,7 @@ export default function Home() {
             {services.map((s, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}>
                 <Link href={s.href}
-                  className={`group relative flex flex-col gap-4 p-6 rounded-2xl border border-white/8 bg-gradient-to-br ${s.tw} hover:border-white/18 transition-all duration-300 h-full overflow-hidden`}>
+                  className={`group relative flex flex-col gap-4 p-6 rounded-2xl border border-primary/15 bg-gradient-to-br ${s.tw} hover:border-primary/35 transition-all duration-300 h-full overflow-hidden`}>
                   <div className="flex items-start justify-between">
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300"
                       style={{ background: `${s.accent}20`, color: s.accent }}>
@@ -290,11 +289,6 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
-
-          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-            className="rounded-2xl overflow-hidden border border-white/8">
-            <img src={servicesImg} alt="3D печать, моделирование, сканирование" className="w-full object-cover max-h-64" />
-          </motion.div>
         </div>
       </section>
 
@@ -317,7 +311,7 @@ export default function Home() {
             {advantages.map((a, i) => (
               <motion.div key={i}
                 initial={{ opacity: 0, x: i % 2 === 0 ? -14 : 14 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}
-                className="flex items-start gap-4 p-6 rounded-2xl border border-white/7 bg-white/2 hover:border-white/14 hover:bg-white/4 transition-all"
+                className="flex items-start gap-4 p-6 rounded-2xl border border-primary/12 bg-primary/3 hover:border-primary/30 hover:bg-primary/6 transition-all"
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.color} ${a.bg}`}>{a.icon}</div>
                 <div>
@@ -417,7 +411,7 @@ export default function Home() {
                 Заказать сейчас <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
               <Link href="/gallery"
-                className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-white/20 bg-white/5 px-10 text-base font-semibold text-white backdrop-blur-sm transition-all hover:border-white/40 hover:bg-white/10">
+                className="inline-flex h-14 items-center justify-center rounded-2xl border-2 border-primary/25 bg-primary/5 px-10 text-base font-semibold text-white backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/10">
                 Галерея работ
               </Link>
               <Link href="/shop"
