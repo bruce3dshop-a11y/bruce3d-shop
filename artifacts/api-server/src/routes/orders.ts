@@ -312,7 +312,7 @@ ${sep}${adminLink}`;
         const isAdmin = isAdminSession(req);
         if (!user && !isAdmin) return res.status(401).json({ error: "Unauthorized" });
 
-        const [order] = await db.select().from(ordersTable)
+        let [order] = await db.select().from(ordersTable)
           .where(eq(ordersTable.id, Number(req.params.id))).limit(1);
 
         if (!order) return res.status(404).json({ error: "Not found" });
