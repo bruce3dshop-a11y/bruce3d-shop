@@ -56,6 +56,158 @@ const quickActions = [
   { icon: <MessageSquare className="w-5 h-5" />, label: "Telegram", href: TELEGRAM_URL, color: "border-primary/30 hover:border-primary/60 text-primary", external: true },
 ];
 
+
+function WireframeModel() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const S = 300;
+    canvas.width = S;
+    canvas.height = S;
+
+    // Icosahedron vertices (normalised)
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const rawV: [number, number, number][] = [
+      [-1, phi, 0],[1, phi, 0],[-1,-phi, 0],[1,-phi, 0],
+      [0,-1, phi],[0, 1, phi],[0,-1,-phi],[0, 1,-phi],
+      [phi, 0,-1],[phi, 0, 1],[-phi, 0,-1],[-phi, 0, 1],
+    ];
+    const verts = rawV.map(([x, y, z]) => {
+      const l = Math.sqrt(x*x + y*y + z*z);
+      return [x/l, y/l, z/l] as [number,number,number];
+    });
+    const edges: [number,number][] = [
+      [0,1],[0,5],[0,7],[0,10],[0,11],
+      [1,5],[1,7],[1,8],[1,9],
+      [2,3],[2,4],[2,6],[2,10],[2,11],
+      [3,4],[3,6],[3,8],[3,9],
+      [4,5],[4,9],[4,11],
+      [5,9],[5,11],
+      [6,7],[6,8],[6,10],
+      [7,8],[7,10],
+      [8,9],[10,11],
+    ];
+
+    let ax = 0, ay = 0, az = 0, frame = 0;
+
+    const rx = (x:number, y:number, z:number, a:number) =>
+      [x, y*Math.cos(a)-z*Math.sin(a), y*Math.sin(a)+z*Math.cos(a)] as [number,number,number];
+    const ry = (x:number, y:number, z:number, a:number) =>
+      [x*Math.cos(a)+z*Math.sin(a), y, -x*Math.sin(a)+z*Math.cos(a)] as [number,number,number];
+    const rz = (x:number, y:number, z:number, a:number) =>
+      [x*Math.cos(a)-y*Math.sin(a), x*Math.sin(a)+y*Math.cos(a), z] as [number,number,number];
+
+    const project = (x:number, y:number, z:number) => {
+      const fov = 3.5, half = S/2;
+      const zp = z + fov;
+      return [x/zp*half*1.3+half, y/zp*half*1.3+half, z] as [number,number,number];
+    };
+
+    let animId: number;
+    const draw = () => {
+      ctx.clearRect(0, 0, S, S);
+      ax += 0.006; ay += 0.013; az += 0.004;
+      frame++;
+
+      const proj = verts.map(([x,y,z]) => {
+        let p = rx(x,y,z,ax);
+        p = ry(p[0],p[1],p[2],ay);
+        p = rz(p[0],p[1],p[2],az);
+        return project(p[0],p[1],p[2]);
+      });
+
+      // Edges
+      edges.forEach(([a, b]) => {
+        const [ax2,ay2,az2] = proj[a];
+        const [bx,by,bz] = proj[b];
+        const depth = ((az2+bz)/2 + 1) / 2;
+        const alpha = 0.25 + depth * 0.75;
+        ctx.beginPath();
+        ctx.moveTo(ax2, ay2);
+        ctx.lineTo(bx, by);
+        ctx.strokeStyle = `rgba(168,85,247,${alpha})`;
+        ctx.lineWidth = 0.6 + depth * 1.4;
+        ctx.shadowColor = "#a855f7";
+        ctx.shadowBlur = 6 + depth * 14;
+        ctx.stroke();
+      });
+
+      // Vertices
+      proj.forEach(([px,py,pz]) => {
+        const d = (pz + 1) / 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5 + d*2.5, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(216,180,254,${0.4+d*0.6})`;
+        ctx.shadowColor = "#c084fc";
+        ctx.shadowBlur = 12;
+        ctx.fill();
+      });
+
+      // Scan line
+      const sy = (frame * 1.8) % S;
+      const grad = ctx.createLinearGradient(0, sy-10, 0, sy+10);
+      grad.addColorStop(0, "rgba(168,85,247,0)");
+      grad.addColorStop(0.5, "rgba(168,85,247,0.18)");
+      grad.addColorStop(1, "rgba(168,85,247,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, sy-10, S, 20);
+
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <div className="relative flex items-center justify-center w-[320px] h-[320px] select-none">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 rounded-2xl bg-violet-700/20 blur-3xl" />
+      <div className="absolute inset-8 rounded-2xl bg-primary/15 blur-2xl animate-pulse" />
+
+      {/* HUD frame */}
+      <div className="absolute inset-0 rounded-2xl border border-violet-500/25" />
+      <div className="absolute inset-[6px] rounded-2xl border border-purple-400/15" />
+
+      {/* Corner brackets */}
+      {(["top-2 left-2","top-2 right-2","bottom-2 left-2","bottom-2 right-2"] as const).map((pos, i) => (
+        <div key={i} className={`absolute ${pos} w-5 h-5 ${
+          i<2 ? "border-t-2" : "border-b-2"} ${
+          i%2===0 ? "border-l-2" : "border-r-2"} border-violet-400/60`} />
+      ))}
+
+      {/* Top status bar */}
+      <div className="absolute top-4 left-0 right-0 flex justify-center">
+        <div className="flex items-center gap-2 px-3 py-0.5 rounded-full bg-violet-950/60 border border-violet-500/30 backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_#4ade80]" />
+          <span className="text-[9px] font-mono text-violet-300/80 tracking-widest uppercase">3D Model · Rendering</span>
+        </div>
+      </div>
+
+      {/* Canvas */}
+      <canvas
+        ref={canvasRef}
+        className="relative z-10"
+        style={{ filter: "drop-shadow(0 0 24px rgba(147,51,234,0.7))" }}
+      />
+
+      {/* Bottom data readout */}
+      <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-4">
+        {[["FDM","PLA+"],["RES","0.1mm"],["MAT","PETG"]].map(([k,v]) => (
+          <div key={k} className="flex flex-col items-center">
+            <span className="text-[8px] font-mono text-violet-400/50 tracking-widest">{k}</span>
+            <span className="text-[10px] font-mono text-violet-300/80 font-bold">{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { data: statsData } = useQuery({
     queryKey: ["stats"],
@@ -125,52 +277,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
                 className="mb-6 flex items-center justify-center lg:justify-start"
               >
-                {/* Floating logo in glowing circle */}
-                <div className="relative flex items-center justify-center w-[340px] h-[340px]">
-                  {/* Deep glow layers */}
-                  <div className="absolute inset-0 rounded-full bg-violet-700/25 blur-3xl" />
-                  <div className="absolute inset-10 rounded-full bg-primary/20 blur-2xl animate-pulse" />
-
-                  {/* Rotating dashed orbit ring */}
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-4 rounded-full pointer-events-none"
-                    style={{ border: "1px dashed rgba(147,51,234,0.35)" }}
-                  />
-                  {/* Counter-rotating solid ring */}
-                  <motion.div
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{ border: "1px solid rgba(192,132,252,0.18)" }}
-                  />
-
-                  {/* Orbit sparks */}
-                  {[0, 72, 144, 216, 288].map((deg, i) => (
-                    <motion.div
-                      key={deg}
-                      className="absolute w-2 h-2 rounded-full"
-                      style={{
-                        background: ["#c084fc","#818cf8","#22d3ee","#f472b6","#4ade80"][i],
-                        boxShadow: `0 0 8px ${["#c084fc","#818cf8","#22d3ee","#f472b6","#4ade80"][i]}`,
-                        top: `calc(50% + ${Math.sin((deg * Math.PI) / 180) * 162}px - 4px)`,
-                        left: `calc(50% + ${Math.cos((deg * Math.PI) / 180) * 162}px - 4px)`,
-                      }}
-                      animate={{ scale: [0.8, 1.5, 0.8], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2 + i * 0.4, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                  ))}
-
-                  {/* The logo — floats up and down */}
-                  <motion.img
-                    src="/logo-wide.png"
-                    alt="BRUCE 3D SHOP — Killer Bunny™"
-                    animate={{ y: [0, -18, 0] }}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative z-10 w-[260px] drop-shadow-[0_0_50px_rgba(147,51,234,0.7)]"
-                  />
-                </div>
+                <WireframeModel />
               </motion.div>
 
               <motion.p
