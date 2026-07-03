@@ -35,6 +35,8 @@ export const ordersTable = pgTable("orders", {
   delivery_city: text("delivery_city"),
   delivery_address: text("delivery_address"),
   delivery_index: text("delivery_index"),
+  delivery_full_name: text("delivery_full_name"),
+  delivery_phone: text("delivery_phone"),
   status: text("status").default("new").notNull(),
   price: text("price"),
   payment_link: text("payment_link"),
