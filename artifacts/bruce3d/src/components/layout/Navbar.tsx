@@ -15,7 +15,7 @@ function LangToggle({ dark }: { dark?: boolean }) {
       onClick={() => setLang(lang === "ru" ? "en" : "ru")}
       className={`flex items-center gap-1 text-xs font-bold transition-colors px-2.5 py-1.5 rounded-lg border ${
         dark
-          ? "text-white/50 hover:text-white border-white/10 hover:border-white/20 hover:bg-white/5"
+          ? "text-white/50 hover:text-white border-primary/15 hover:border-primary/30 hover:bg-white/5"
           : "text-muted-foreground hover:text-foreground border-transparent hover:border-border/30 hover:bg-accent/30"
       }`}
     >
@@ -96,7 +96,7 @@ function MobileMenu({
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
 
             {/* Header */}
-            <div className="relative flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5">
+            <div className="relative flex items-center justify-between px-6 pt-5 pb-4 border-b border-primary/10">
               <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
                 <img src="/logo.png" alt="BRUCE 3D SHOP" className="h-10 w-10 object-contain" />
                 <span className="text-sm font-black tracking-tight leading-none text-white">
@@ -105,14 +105,14 @@ function MobileMenu({
               </Link>
               <button
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all"
+                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-primary/15 flex items-center justify-center text-white/60 hover:text-white transition-all"
               >
                 <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
 
             {/* ── USER BLOCK AT TOP ── */}
-            <div className="relative px-4 pt-3 pb-2 border-b border-white/5">
+            <div className="relative px-4 pt-3 pb-2 border-b border-primary/10">
               {user ? (
                 <div className="space-y-1">
                   <Link
@@ -177,7 +177,7 @@ function MobileMenu({
 
               {isAdmin && (
                 <>
-                  <div className="my-3 border-t border-white/5" />
+                  <div className="my-3 border-t border-primary/10" />
                   <Link
                     href="/admin"
                     onClick={onClose}
@@ -199,7 +199,7 @@ function MobileMenu({
             </nav>
 
             {/* CTA button */}
-            <div className="relative px-4 pb-6 pt-3 border-t border-white/5">
+            <div className="relative px-4 pb-6 pt-3 border-t border-primary/10">
               <Link href="/order" onClick={onClose}>
                 <button className="relative w-full rounded-2xl overflow-hidden group" style={{ height: 52 }}>
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-500" />
