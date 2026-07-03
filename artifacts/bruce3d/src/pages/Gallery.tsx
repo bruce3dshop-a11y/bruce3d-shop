@@ -51,98 +51,103 @@ export default function Gallery() {
   const filtered = activeCategory === "Все" ? items : items.filter(i => i.category === activeCategory);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="container mx-auto px-4 py-16 md:py-24"
-    >
-      <div className="max-w-3xl mb-12">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-4xl md:text-5xl font-bold font-display mb-4"
-        >
-          Галерея <span className="text-primary">работ</span>
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-lg text-muted-foreground"
-        >
-          Реальные проекты наших клиентов. Каждое изделие — ваша идея, воплощённая в пластике.
-        </motion.p>
-      </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="flex flex-wrap gap-2 mb-8"
-      >
-        {categories.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeCategory === cat
-                ? "bg-primary text-white shadow-lg shadow-primary/30"
-                : "bg-card/50 border border-border/50 hover:border-primary/40 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </motion.div>
-
-      {filtered.length > 0 ? (
-        <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <AnimatePresence>
-            {filtered.map((item, i) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: i * 0.05 }}
-                className="group cursor-pointer rounded-xl overflow-hidden border border-border/30 hover:border-primary/40 transition-all relative"
-              >
-                <div
-                  className="aspect-square relative overflow-hidden bg-card/40"
-                  onClick={() => setSelectedItem(item)}
-                >
-                  <img
-                    src={item.image_url}
-                    alt={item.title || "Работа"}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  {item.title && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <span className="text-white text-sm font-medium">{item.title}</span>
-                    </div>
-                  )}
-                </div>
-
-                {isAdmin && (
-                  <button
-                    onClick={e => { e.stopPropagation(); setConfirmDelete(item.id); }}
-                    className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                    title="Удалить фото"
-                  >
-                    <Trash2 className="w-4 h-4 text-white" />
-                  </button>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <ImageOff className="w-12 h-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Нет работ в этой категории</p>
+      {/* HERO */}
+      <section className="relative py-20 md:py-28 overflow-hidden">
+        <div className="absolute inset-0 bg-[#060008]" />
+        <div className="absolute inset-0 bg-industrial-grid opacity-40" />
+        <div className="absolute top-1/2 left-0 w-96 h-96 rounded-full bg-purple-800/25 blur-[120px] pointer-events-none -translate-y-1/2" />
+        <div className="absolute top-1/2 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-[100px] pointer-events-none -translate-y-1/2" />
+        <div className="container relative z-10 mx-auto px-4 md:px-8 text-center">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="text-5xl md:text-7xl font-black font-display uppercase mb-4 leading-none"
+            style={{ background: "linear-gradient(135deg,#fff 0%,#c084fc 70%,#9333ea 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            Галерея работ
+          </motion.h1>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Реальные проекты наших клиентов. Каждое изделие — ваша идея, воплощённая в пластике.
+          </motion.p>
         </div>
-      )}
+      </section>
+
+      <section className="relative z-10 py-16 md:py-20 bg-background">
+        <div className="container mx-auto px-4 md:px-8">
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-wrap gap-2 mb-10"
+          >
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  activeCategory === cat
+                    ? "bg-primary text-white shadow-lg shadow-primary/30"
+                    : "border border-primary/20 bg-primary/5 hover:border-primary/40 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </motion.div>
+
+          {filtered.length > 0 ? (
+            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <AnimatePresence>
+                {filtered.map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group cursor-pointer rounded-2xl overflow-hidden border border-primary/15 hover:border-primary/40 transition-all relative"
+                  >
+                    <div
+                      className="aspect-square relative overflow-hidden bg-black/20"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      <img
+                        src={item.image_url}
+                        alt={item.title || "Работа"}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      {item.title && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                          <span className="text-white text-sm font-medium">{item.title}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {isAdmin && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setConfirmDelete(item.id); }}
+                        className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                        title="Удалить фото"
+                      >
+                        <Trash2 className="w-4 h-4 text-white" />
+                      </button>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <ImageOff className="w-12 h-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Нет работ в этой категории</p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Lightbox */}
       <AnimatePresence>
@@ -163,7 +168,7 @@ export default function Gallery() {
             >
               <button
                 onClick={() => setSelectedItem(null)}
-                className="absolute -top-4 -right-4 z-10 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"
+                className="absolute -top-4 -right-4 z-10 w-8 h-8 rounded-full bg-primary/20 hover:bg-primary/30 flex items-center justify-center"
               >
                 <X className="w-4 h-4 text-white" />
               </button>
@@ -206,7 +211,7 @@ export default function Gallery() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border rounded-xl p-6 max-w-sm w-full shadow-2xl"
+              className="bg-card border border-primary/20 rounded-2xl p-6 max-w-sm w-full shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
               <h3 className="text-lg font-bold mb-2">Удалить фото?</h3>
@@ -214,7 +219,7 @@ export default function Gallery() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDelete(null)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-accent transition-colors text-sm"
+                  className="flex-1 px-4 py-2 rounded-lg border border-primary/20 hover:bg-accent transition-colors text-sm"
                 >
                   Отмена
                 </button>
