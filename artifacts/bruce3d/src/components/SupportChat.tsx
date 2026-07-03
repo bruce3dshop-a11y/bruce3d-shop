@@ -190,11 +190,11 @@ export default function SupportChat() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="w-80 rounded-2xl border border-white/10 bg-[#0f0f14]/95 backdrop-blur-xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden"
+            className="w-80 rounded-2xl border border-primary/15 bg-[#0f0f14]/95 backdrop-blur-xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden"
             style={{ maxHeight: "480px" }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 bg-gradient-to-r from-primary/10 to-violet-900/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-primary/12 bg-gradient-to-r from-primary/10 to-violet-900/10">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
                   <MessageCircle className="w-4 h-4 text-primary" />
@@ -222,7 +222,7 @@ export default function SupportChat() {
                     value={visitorName}
                     onChange={e => setVisitorName(e.target.value)}
                     placeholder="Ваше имя"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus:border-primary/50"
+                    className="w-full bg-white/5 border border-primary/15 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus:border-primary/50"
                     autoFocus
                   />
                   <button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white text-sm font-semibold py-2 rounded-xl transition-all">
@@ -281,12 +281,12 @@ export default function SupportChat() {
 
             {/* Input */}
             {!nameAsked && !loading && !closed && session && (
-              <form onSubmit={sendMessage} className="flex gap-2 p-3 border-t border-white/8">
+              <form onSubmit={sendMessage} className="flex gap-2 p-3 border-t border-primary/12">
                 <input
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   placeholder="Сообщение..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus:border-primary/50 min-w-0"
+                  className="flex-1 bg-white/5 border border-primary/15 rounded-xl px-3 py-2 text-sm text-white placeholder:text-white/30 outline-none focus:border-primary/50 min-w-0"
                 />
                 <button
                   type="submit"
@@ -298,7 +298,7 @@ export default function SupportChat() {
               </form>
             )}
             {!nameAsked && !loading && closed && (
-              <div className="p-3 border-t border-white/8">
+              <div className="p-3 border-t border-primary/12">
                 <button
                   onClick={startNewChat}
                   className="w-full py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary text-sm font-semibold transition-all flex items-center justify-center gap-2"
