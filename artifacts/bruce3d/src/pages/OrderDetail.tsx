@@ -101,7 +101,13 @@ import { useState, useEffect, useRef } from "react";
       queryKey: ["order-detail", orderId],
       queryFn: () => apiFetch<OrderDetailData>(`orders/${orderId}`),
       enabled: !!orderId && (!!user || isAdmin),
-      refetchInterval: 15000,
+      refetchInterval: (query) => {
+        const d = query.state.data as OrderDetailData | undefined;
+        if (!d) return 8000;
+        const hasBill = !!d.order?.price;
+        const isConfirmed = d.order?.status === "confirmed" || d.paymentPaid;
+        return hasBill && !isConfirmed ? 3000 : 30000;
+      },
       retry: 1,
     });
 
