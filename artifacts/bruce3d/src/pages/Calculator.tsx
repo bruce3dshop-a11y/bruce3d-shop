@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { Calculator as CalcIcon, ArrowRight, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const materials = [
   { id: "pla", name: "PLA", pricePerGram: 3.5, density: 1.24, color: "bg-green-500" },
@@ -18,8 +17,6 @@ const qualities = [
   { id: "standard", name: "Стандарт", multiplier: 1.3, layerHeight: "0.2 мм", desc: "Баланс качества и скорости" },
   { id: "fine", name: "Детальное", multiplier: 1.7, layerHeight: "0.1 мм", desc: "Высокая точность" },
 ];
-
-const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function Calculator() {
   const [material, setMaterial] = useState(materials[0]);
@@ -38,33 +35,38 @@ export default function Calculator() {
   const printTime = Math.round((weight[0] / material.density / 10) * quality.multiplier * (1 + infill[0] / 100));
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="show"
-      variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-      className="container mx-auto px-4 py-16 md:py-24"
-    >
-      <div className="max-w-3xl mb-12">
-        <motion.div variants={itemVariants} className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <CalcIcon className="w-6 h-6 text-primary" />
-          </div>
-          <span className="text-primary font-semibold text-sm uppercase tracking-wider">Онлайн-калькулятор</span>
-        </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl md:text-5xl font-bold font-display mb-4">
-          Рассчитайте <span className="text-primary">стоимость</span>
-        </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground">
-          Предварительный расчёт стоимости 3D-печати. Точная цена — после анализа вашего файла.
-        </motion.p>
-      </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <motion.div variants={itemVariants}>
-            <Card className="bg-card/40 border-border/50">
-              <CardHeader><CardTitle className="text-base font-display">Материал</CardTitle></CardHeader>
-              <CardContent>
+      {/* HERO */}
+      <section className="relative py-20 md:py-28 overflow-hidden">
+        <div className="absolute inset-0 bg-[#060008]" />
+        <div className="absolute inset-0 bg-industrial-grid opacity-40" />
+        <div className="absolute top-1/2 left-0 w-96 h-96 rounded-full bg-purple-800/25 blur-[120px] pointer-events-none -translate-y-1/2" />
+        <div className="absolute top-1/2 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-[100px] pointer-events-none -translate-y-1/2" />
+        <div className="container relative z-10 mx-auto px-4 md:px-8 text-center">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold mb-6 uppercase tracking-wider">
+            <CalcIcon className="w-3.5 h-3.5" /> Онлайн-калькулятор
+          </motion.div>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-black font-display uppercase mb-4 leading-none"
+            style={{ background: "linear-gradient(135deg,#fff 0%,#c084fc 70%,#9333ea 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            Рассчитайте стоимость
+          </motion.h1>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Предварительный расчёт стоимости 3D-печати. Точная цена — после анализа вашего файла.
+          </motion.p>
+        </div>
+      </section>
+
+      <section className="relative z-10 py-16 md:py-20 bg-background">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-transparent p-6">
+                <h3 className="font-display font-bold text-base mb-4">Материал</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {materials.map(m => (
                     <button
@@ -73,7 +75,7 @@ export default function Calculator() {
                       className={`p-3 rounded-xl border text-sm font-medium transition-all ${
                         material.id === m.id
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                          : "border-primary/15 hover:border-primary/35 hover:bg-primary/5"
                       }`}
                     >
                       <div className={`w-2 h-2 rounded-full ${m.color} mx-auto mb-1.5`} />
@@ -82,14 +84,11 @@ export default function Calculator() {
                     </button>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Card className="bg-card/40 border-border/50">
-              <CardHeader><CardTitle className="text-base font-display">Качество печати</CardTitle></CardHeader>
-              <CardContent>
+              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
+                className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-transparent p-6">
+                <h3 className="font-display font-bold text-base mb-4">Качество печати</h3>
                 <div className="grid grid-cols-3 gap-2">
                   {qualities.map(q => (
                     <button
@@ -98,7 +97,7 @@ export default function Calculator() {
                       className={`p-3 rounded-xl border text-sm text-center transition-all ${
                         quality.id === q.id
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                          : "border-primary/15 hover:border-primary/35 hover:bg-primary/5"
                       }`}
                     >
                       <div className="font-medium mb-0.5">{q.name}</div>
@@ -107,14 +106,11 @@ export default function Calculator() {
                     </button>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <Card className="bg-card/40 border-border/50">
-              <CardHeader><CardTitle className="text-base font-display">Параметры</CardTitle></CardHeader>
-              <CardContent className="space-y-6">
+              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
+                className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-transparent p-6 space-y-6">
+                <h3 className="font-display font-bold text-base">Параметры</h3>
                 <div>
                   <div className="flex justify-between mb-3">
                     <span className="text-sm font-medium">Вес изделия</span>
@@ -142,62 +138,59 @@ export default function Calculator() {
                   <Slider value={copies} onValueChange={setCopies} min={1} max={50} step={1} className="w-full" />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1"><span>1 шт.</span><span>50 шт.</span></div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+              </motion.div>
+            </div>
 
-        <motion.div variants={itemVariants} className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
-            <Card className="bg-primary/5 border-primary/30">
-              <CardHeader>
-                <CardTitle className="font-display text-lg">Результат</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center py-4">
-                  <div className="text-sm text-muted-foreground mb-1">Примерная стоимость</div>
-                  <div className="text-4xl font-black text-primary">{minCost}–{maxCost} <span className="text-2xl">₽</span></div>
-                  <div className="text-xs text-muted-foreground mt-1">за {copies[0]} шт.</div>
+            <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}
+              className="lg:col-span-1">
+              <div className="sticky top-24">
+                <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-6 space-y-4">
+                  <h3 className="font-display text-lg font-bold">Результат</h3>
+                  <div className="text-center py-4">
+                    <div className="text-sm text-muted-foreground mb-1">Примерная стоимость</div>
+                    <div className="text-4xl font-black text-primary">{minCost}–{maxCost} <span className="text-2xl">₽</span></div>
+                    <div className="text-xs text-muted-foreground mt-1">за {copies[0]} шт.</div>
+                  </div>
+
+                  <div className="space-y-2 text-sm border-t border-primary/15 pt-4">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Материал</span>
+                      <span className="font-medium">{material.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Качество</span>
+                      <span className="font-medium">{quality.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Вес</span>
+                      <span className="font-medium">{weight[0]} г × {copies[0]}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Заполнение</span>
+                      <span className="font-medium">{infill[0]}%</span>
+                    </div>
+                    <div className="flex justify-between border-t border-primary/15 pt-2">
+                      <span className="text-muted-foreground">Примерное время</span>
+                      <span className="font-medium">{printTime} ч</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-400">
+                    Это приблизительный расчёт. Точная стоимость определяется после анализа STL-файла.
+                  </div>
+
+                  <Link
+                    href="/order"
+                    className="flex items-center justify-center gap-2 w-full h-11 rounded-2xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all hover:scale-105"
+                  >
+                    Оформить заказ <ArrowRight className="w-4 h-4" />
+                  </Link>
                 </div>
-
-                <div className="space-y-2 text-sm border-t border-border/30 pt-4">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Материал</span>
-                    <span className="font-medium">{material.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Качество</span>
-                    <span className="font-medium">{quality.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Вес</span>
-                    <span className="font-medium">{weight[0]} г × {copies[0]}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Заполнение</span>
-                    <span className="font-medium">{infill[0]}%</span>
-                  </div>
-                  <div className="flex justify-between border-t border-border/30 pt-2">
-                    <span className="text-muted-foreground">Примерное время</span>
-                    <span className="font-medium">{printTime} ч</span>
-                  </div>
-                </div>
-
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-400">
-                  Это приблизительный расчёт. Точная стоимость определяется после анализа STL-файла.
-                </div>
-
-                <Link
-                  href="/order"
-                  className="flex items-center justify-center gap-2 w-full h-11 rounded-full bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all hover:scale-105"
-                >
-                  Оформить заказ <ArrowRight className="w-4 h-4" />
-                </Link>
-              </CardContent>
-            </Card>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
     </motion.div>
   );
 }
