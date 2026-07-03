@@ -17,7 +17,7 @@ export default function ContactWidget() {
             exit={{ opacity: 0, y: 16, scale: 0.9 }}
             className="flex flex-col gap-2 items-end"
           >
-            <div className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur border border-white/10 text-xs text-white/70">
+            <div className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur border border-primary/15 text-xs text-white/70">
               Напишите нам — ответим быстро!
             </div>
             <a
