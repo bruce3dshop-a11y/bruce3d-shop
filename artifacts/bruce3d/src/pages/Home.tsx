@@ -122,14 +122,77 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-16">
             <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl">
               <motion.div
-                initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
-                className="mb-6"
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35, duration: 0.7 }}
+                className="mb-6 flex items-center justify-center lg:justify-start"
               >
-                <img
-                  src="/logo-wide.png"
-                  alt="BRUCE 3D SHOP — Killer Bunny™"
-                  className="w-full max-w-[420px] mx-auto lg:mx-0 drop-shadow-[0_0_50px_rgba(147,51,234,0.55)]"
-                />
+                {/* ── Animated 3D Cube ── */}
+                <div className="relative flex items-center justify-center w-[260px] h-[260px]">
+                  {/* Outer ambient glow */}
+                  <div className="absolute inset-0 rounded-full bg-violet-600/20 blur-3xl" />
+                  <div className="absolute inset-8 rounded-full bg-primary/15 blur-2xl animate-pulse" />
+
+                  {/* CSS 3D rotating cube */}
+                  <div style={{ perspective: "700px" }} className="w-40 h-40">
+                    <motion.div
+                      animate={{ rotateY: 360, rotateX: [15, 15] }}
+                      transition={{ rotateY: { duration: 9, repeat: Infinity, ease: "linear" }, rotateX: { duration: 0 } }}
+                      style={{ transformStyle: "preserve-3d" }}
+                      className="w-full h-full relative"
+                    >
+                      {[
+                        { transform: "translateZ(80px)",                    label: "3D",    color: "#c084fc", bg: "rgba(147,51,234,0.12)"  },
+                        { transform: "rotateY(180deg) translateZ(80px)",    label: "PRINT", color: "#818cf8", bg: "rgba(99,102,241,0.12)"  },
+                        { transform: "rotateY(90deg) translateZ(80px)",     label: "SCAN",  color: "#22d3ee", bg: "rgba(6,182,212,0.12)"   },
+                        { transform: "rotateY(-90deg) translateZ(80px)",    label: "MODEL", color: "#f472b6", bg: "rgba(236,72,153,0.12)"  },
+                        { transform: "rotateX(90deg) translateZ(80px)",     label: "BRUCE", color: "#fbbf24", bg: "rgba(251,191,36,0.12)"  },
+                        { transform: "rotateX(-90deg) translateZ(80px)",    label: "SHOP",  color: "#4ade80", bg: "rgba(74,222,128,0.12)"  },
+                      ].map((face, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            transform: face.transform,
+                            border: `2px solid ${face.color}80`,
+                            background: face.bg,
+                            boxShadow: `inset 0 0 20px ${face.color}20`,
+                            backdropFilter: "blur(4px)",
+                            color: face.color,
+                          }}
+                          className="absolute inset-0 flex items-center justify-center font-black text-3xl tracking-widest"
+                        >
+                          {face.label}
+                        </div>
+                      ))}
+                    </motion.div>
+                  </div>
+
+                  {/* Orbiting ring */}
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full pointer-events-none"
+                    style={{ border: "1px dashed rgba(147,51,234,0.3)" }}
+                  />
+                  <motion.div
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-6 rounded-full pointer-events-none"
+                    style={{ border: "1px solid rgba(129,140,248,0.2)" }}
+                  />
+
+                  {/* Corner sparks */}
+                  {[0, 90, 180, 270].map((deg) => (
+                    <motion.div
+                      key={deg}
+                      className="absolute w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_#9333ea]"
+                      animate={{ scale: [1, 1.6, 1], opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 1.5 + deg / 200, repeat: Infinity, ease: "easeInOut" }}
+                      style={{
+                        top: `calc(50% + ${Math.sin((deg * Math.PI) / 180) * 118}px - 4px)`,
+                        left: `calc(50% + ${Math.cos((deg * Math.PI) / 180) * 118}px - 4px)`,
+                      }}
+                    />
+                  ))}
+                </div>
               </motion.div>
 
               <motion.p
@@ -239,17 +302,79 @@ export default function Home() {
       </section>
 
       {/* ====== LIVE STATS BAR ====== */}
-      <section className="relative z-10 border-y border-primary/20 bg-primary/5 backdrop-blur-sm">
-        <div className="container mx-auto px-4 md:px-8 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center text-center gap-1">
-                <div className="text-primary mb-1">{stat.icon}</div>
-                <div className="text-2xl md:text-3xl font-black text-white font-display">
-                  {stat.fixed ? `${stat.value}${stat.suffix}` : <AnimatedCounter target={stat.value as number} suffix={stat.suffix} />}
+      <section className="relative z-10 py-14 overflow-hidden">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-950/60 via-background to-indigo-950/40 pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: "linear-gradient(rgba(147,51,234,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(147,51,234,0.06) 1px, transparent 1px)",
+          backgroundSize: "48px 48px"
+        }} />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(147,51,234,0.07),transparent)] pointer-events-none" />
+
+        <div className="container relative mx-auto px-4 md:px-8">
+          {/* Section header */}
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/8 text-primary text-xs font-bold tracking-widest uppercase mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Live данные
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black font-display uppercase tracking-tight"
+              style={{ background: "linear-gradient(135deg,#fff 0%,#c084fc 60%,#9333ea 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              В цифрах
+            </h2>
+          </motion.div>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
+            {[
+              { ...stats[0], accent: "#c084fc", glow: "rgba(192,132,252,0.15)", border: "rgba(192,132,252,0.25)", stripe: "from-violet-500 to-purple-600" },
+              { ...stats[1], accent: "#22d3ee", glow: "rgba(34,211,238,0.12)", border: "rgba(34,211,238,0.25)", stripe: "from-cyan-400 to-sky-500" },
+              { ...stats[2], accent: "#fbbf24", glow: "rgba(251,191,36,0.12)", border: "rgba(251,191,36,0.25)", stripe: "from-amber-400 to-orange-500" },
+              { ...stats[3], accent: "#4ade80", glow: "rgba(74,222,128,0.10)", border: "rgba(74,222,128,0.25)", stripe: "from-green-400 to-emerald-500" },
+            ].map((stat, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.5, type: "spring", stiffness: 120 }}
+                whileHover={{ scale: 1.04, y: -4 }}
+                className="relative rounded-2xl overflow-hidden cursor-default"
+                style={{ background: "rgba(15,10,30,0.7)", border: `1px solid ${stat.border}`, boxShadow: `0 0 32px ${stat.glow}, inset 0 1px 0 rgba(255,255,255,0.05)` }}
+              >
+                {/* Top gradient stripe */}
+                <div className={`h-1 w-full bg-gradient-to-r ${stat.stripe}`} />
+
+                {/* Corner glow blob */}
+                <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full blur-2xl opacity-30"
+                  style={{ background: stat.accent }} />
+
+                <div className="p-5 md:p-6 flex flex-col gap-2">
+                  {/* Icon */}
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-1"
+                    style={{ background: `${stat.glow}`, border: `1px solid ${stat.border}`, color: stat.accent }}>
+                    {stat.icon}
+                  </div>
+
+                  {/* Big number */}
+                  <div className="text-4xl md:text-5xl font-black font-display leading-none"
+                    style={{ color: stat.accent, textShadow: `0 0 24px ${stat.accent}80` }}>
+                    {(stat as any).fixed
+                      ? `${stat.value}${stat.suffix}`
+                      : <AnimatedCounter target={stat.value as number} suffix={stat.suffix} />}
+                  </div>
+
+                  {/* Label */}
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mt-1">{stat.label}</p>
+
+                  {/* Bottom scan line */}
+                  <motion.div
+                    animate={{ scaleX: [0, 1, 0], opacity: [0, 0.6, 0] }}
+                    transition={{ duration: 2.5 + i * 0.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.6 }}
+                    className="h-px mt-2 rounded-full bg-gradient-to-r from-transparent via-current to-transparent origin-left"
+                    style={{ color: stat.accent }}
+                  />
                 </div>
-                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{stat.label}</div>
               </motion.div>
             ))}
           </div>
