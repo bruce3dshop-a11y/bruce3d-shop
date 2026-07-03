@@ -8,6 +8,7 @@ import { Router } from "express";
     import { getConfig, getGroupChatId } from "../lib/configStore";
     import { uploadBuffer, isStorageConfigured } from "../lib/storage";
     import { getPayment, isYookassaConfigured } from "../lib/yookassa";
+import { broadcastOrderUpdate } from "./chat";
     import { randomBytes } from "crypto";
     import busboy from "busboy";
     import type { IncomingMessage } from "http";
@@ -335,6 +336,19 @@ ${sep}${adminLink}`;
               paymentUrl = storedUrl.startsWith("http")
                 ? storedUrl
                 : (payment.confirmation?.confirmation_url || null);
+            }
+            // Auto-confirm: if YooKassa says paid but our status is behind
+            if (payment.paid && order.status !== "confirmed") {
+              await db.update(ordersTable)
+                .set({ status: "confirmed", updated_at: new Date() })
+                .where(eq(ordersTable.id, order.id));
+              await db.insert(orderStatusHistoryTable).values({
+                order_id: order.id,
+                status: "confirmed",
+                comment: `Автоподтверждение: оплачено через ЮКасса (платёж ${paymentId})`,
+              });
+              order = { ...order, status: "confirmed" };
+              broadcastOrderUpdate(order.id, { type: "status", status: "confirmed" });
             }
           } catch (e) {
             console.error("[orders/:id] getPayment error", e);
