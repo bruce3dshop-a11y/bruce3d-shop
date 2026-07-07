@@ -195,7 +195,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-4 py-10 max-w-3xl relative z-10">

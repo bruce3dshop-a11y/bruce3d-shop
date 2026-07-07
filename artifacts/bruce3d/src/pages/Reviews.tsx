@@ -90,7 +90,7 @@ export default function Reviews() {
 
       {/* HERO */}
       <section className="relative py-20 md:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-[#060008]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#03000a]/55 via-[#03000a]/40 to-[#03000a]/60" />
         <div className="absolute inset-0 bg-industrial-grid opacity-40" />
         <div className="absolute top-1/2 left-0 w-96 h-96 rounded-full bg-purple-800/25 blur-[120px] pointer-events-none -translate-y-1/2" />
         <div className="absolute top-1/2 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-[100px] pointer-events-none -translate-y-1/2" />
@@ -107,7 +107,7 @@ export default function Reviews() {
         </div>
       </section>
 
-      <section className="relative z-10 py-16 md:py-20 bg-background">
+      <section className="relative z-10 py-16 md:py-20 bg-transparent">
         <div className="container mx-auto px-4 md:px-8">
 
           <motion.div
