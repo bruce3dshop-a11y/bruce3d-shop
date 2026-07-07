@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="color-scheme" content="dark" />
     <title>BRUCE 3D SHOP</title>
     <meta name="description" content="BRUCE 3D SHOP — профессиональная 3D-печать в Москве. Заказ онлайн, доставка по всей России." />
     <meta name="robots" content="index, follow" />
@@ -14,7 +15,7 @@
     <meta name="twitter:title" content="BRUCE 3D SHOP" />
     <meta name="twitter:description" content="Профессиональная 3D-печать. Killer Bunny™" />
     <meta name="twitter:image" content="/opengraph.jpg" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#020009" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="BRUCE 3D" />
@@ -24,6 +25,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html, body { color-scheme: dark; background: #020009; }
+      /* Предотвращаем белую вспышку при загрузке */
+      #root { min-height: 100vh; background: #020009; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
