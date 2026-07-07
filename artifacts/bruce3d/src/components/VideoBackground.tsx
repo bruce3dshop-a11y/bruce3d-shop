@@ -127,7 +127,7 @@ export function VideoBackground({ subtle = false }: VideoBackgroundProps) {
 }
 
 // ============================================================
-//  GLOBAL BACKGROUND — все 6 эффектов одновременно
+//  GLOBAL BACKGROUND — fixed, z-index: -1, все 6 эффектов
 // ============================================================
 export function GlobalBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -144,25 +144,29 @@ export function GlobalBackground() {
     let h = (canvas.height = window.innerHeight);
     const isMobile = w < 768;
 
-    // ── DIGITAL RAIN ──────────────────────────────────────────
-    const FONT_SIZE = isMobile ? 12 : 14;
-    const COL_GAP = FONT_SIZE * 1.6;
+    // ── "3D-SHOP" RAIN ────────────────────────────────────────
+    const SHOP_CHARS = ["3", "D", "-", "S", "H", "O", "P", "3", "D", "·", "S", "H", "O", "P", "3", "D"];
+    const FONT_SIZE = isMobile ? 11 : 13;
+    const COL_GAP = FONT_SIZE * 2.2; // wider gap so "3D-SHOP" text is readable
 
     interface RainCol { x: number; y: number; speed: number; chars: string[]; alpha: number; len: number; }
     let rain: RainCol[] = [];
 
+    function randomShopChar() {
+      return SHOP_CHARS[Math.floor(Math.random() * SHOP_CHARS.length)];
+    }
+
     function initRain() {
       const count = Math.floor(w / COL_GAP);
       rain = Array.from({ length: count }, (_, i) => {
-        // Треть колонн — уже на экране сразу, остальные — выше
         const startOnScreen = i % 3 !== 0;
         return {
           x: i * COL_GAP + COL_GAP / 2,
           y: startOnScreen ? Math.random() * h : -Math.random() * h * 1.5,
-          speed: 0.8 + Math.random() * 2.2,
-          chars: Array.from({ length: 24 }, () => Math.random() > 0.5 ? "1" : "0"),
-          alpha: 0.25 + Math.random() * 0.45,
-          len: 14 + Math.floor(Math.random() * 12),
+          speed: 0.6 + Math.random() * 1.8,
+          chars: Array.from({ length: 20 }, randomShopChar),
+          alpha: 0.18 + Math.random() * 0.32,
+          len: 10 + Math.floor(Math.random() * 10),
         };
       });
     }
@@ -200,14 +204,16 @@ export function GlobalBackground() {
       speed: 0.0005 + Math.random() * 0.001,
     }));
 
-    // ── НЕОНОВЫЙ ДЫМ (smoke orbs) ─────────────────────────────
+    // ── ФИОЛЕТОВЫЙ ДЫМ (8 шаров, плотнее) ────────────────────
     const SMOKE = [
-      { xF: 0.14, yF: 0.28, r: 290, color: "#7c3aed", phase: 0,   spd: 0.0035 },
-      { xF: 0.82, yF: 0.65, r: 250, color: "#9333ea", phase: 2.1, spd: 0.0028 },
-      { xF: 0.50, yF: 0.06, r: 210, color: "#a855f7", phase: 4.2, spd: 0.0055 },
-      { xF: 0.90, yF: 0.18, r: 190, color: "#6d28d9", phase: 1.0, spd: 0.0045 },
-      { xF: 0.06, yF: 0.84, r: 220, color: "#c026d3", phase: 3.3, spd: 0.003  },
-      { xF: 0.62, yF: 0.92, r: 170, color: "#7c3aed", phase: 5.1, spd: 0.006  },
+      { xF: 0.14, yF: 0.28, r: 320, color: "#7c3aed", phase: 0,   spd: 0.0035 },
+      { xF: 0.82, yF: 0.65, r: 280, color: "#9333ea", phase: 2.1, spd: 0.0028 },
+      { xF: 0.50, yF: 0.06, r: 240, color: "#a855f7", phase: 4.2, spd: 0.0055 },
+      { xF: 0.90, yF: 0.20, r: 210, color: "#6d28d9", phase: 1.0, spd: 0.0045 },
+      { xF: 0.06, yF: 0.84, r: 250, color: "#c026d3", phase: 3.3, spd: 0.003  },
+      { xF: 0.62, yF: 0.90, r: 195, color: "#7c3aed", phase: 5.1, spd: 0.006  },
+      { xF: 0.35, yF: 0.50, r: 180, color: "#8b5cf6", phase: 1.8, spd: 0.004  },
+      { xF: 0.70, yF: 0.35, r: 200, color: "#a855f7", phase: 2.7, spd: 0.005  },
     ].map(o => ({ ...o, x: w * o.xF, y: h * o.yF }));
 
     // ── MESH GRADIENT WAVES ────────────────────────────────────
@@ -218,7 +224,7 @@ export function GlobalBackground() {
       { xF: 0.15, yF: 0.85, r: 300, phase: Math.PI * 1.5,spd: 0.0035 },
     ].map(o => ({ ...o, x: w * o.xF, y: h * o.yF }));
 
-    // ── СЕТКА (perspective grid) ───────────────────────────────
+    // ── АНИМИРОВАННАЯ СЕТКА ───────────────────────────────────
     let gridOff = 0;
 
     // ── SHOOTING STARS ─────────────────────────────────────────
@@ -258,7 +264,7 @@ export function GlobalBackground() {
       ctx.fillStyle = "#03000c";
       ctx.fillRect(0, 0, w, h);
 
-      // ═══ 4. MESH GRADIENT WAVES ═══
+      // ═══ MESH GRADIENT WAVES ═══
       MESH.forEach((m, i) => {
         const px = m.x + Math.sin(t * m.spd * 4 + m.phase) * w * 0.18;
         const py = m.y + Math.cos(t * m.spd * 3 + m.phase) * h * 0.14;
@@ -288,29 +294,29 @@ export function GlobalBackground() {
       ctx.beginPath(); ctx.arc(wx, wy, 280, 0, Math.PI * 2);
       ctx.fillStyle = wg; ctx.fill();
 
-      // ═══ 3. НЕОНОВЫЙ ДЫМ ═══
+      // ═══ ФИОЛЕТОВЫЙ ДЫМ (5 слоёв каждый шар) ═══
       SMOKE.forEach(o => {
-        const pulse = 1 + 0.14 * Math.sin(t * o.spd * 50 + o.phase);
-        const dx = Math.sin(t * o.spd * 2.5 + o.phase) * 70;
-        const dy = Math.cos(t * o.spd * 2 + o.phase) * 45;
+        const pulse = 1 + 0.12 * Math.sin(t * o.spd * 50 + o.phase);
+        const dx = Math.sin(t * o.spd * 2.5 + o.phase) * 80;
+        const dy = Math.cos(t * o.spd * 2 + o.phase) * 55;
         const ox = o.x + dx, oy = o.y + dy;
 
-        for (let layer = 0; layer < 4; layer++) {
-          const lr = o.r * pulse * (1 - layer * 0.2);
-          const lx = ox + Math.sin(t * 0.6 + layer * 1.1 + o.phase) * 35;
-          const ly = oy + Math.cos(t * 0.45 + layer * 0.9 + o.phase) * 25;
-          const opacity = ["55","28","18","0c"][layer];
-          const fade    = ["1a","0c","06","03"][layer];
+        for (let layer = 0; layer < 5; layer++) {
+          const lr = o.r * pulse * (1 - layer * 0.16);
+          const lx = ox + Math.sin(t * 0.55 + layer * 1.1 + o.phase) * 45;
+          const ly = oy + Math.cos(t * 0.42 + layer * 0.9 + o.phase) * 32;
+          const opacities = ["60","30","18","0e","06"][layer];
+          const fades    = ["1e","0e","08","04","02"][layer];
           const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
-          grad.addColorStop(0, o.color + opacity);
-          grad.addColorStop(0.35, o.color + fade);
+          grad.addColorStop(0, o.color + opacities);
+          grad.addColorStop(0.4, o.color + fades);
           grad.addColorStop(1, "transparent");
           ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2);
           ctx.fillStyle = grad; ctx.fill();
         }
       });
 
-      // ═══ 6. КОСМОС: боке ═══
+      // ═══ BOKEH ═══
       BOKEH.forEach(b => {
         b.angle += b.speed;
         const bx = b.x + Math.cos(b.angle) * 35;
@@ -323,7 +329,7 @@ export function GlobalBackground() {
         ctx.fillStyle = grad; ctx.fill();
       });
 
-      // ═══ 1. АНИМИРОВАННАЯ СЕТКА ═══
+      // ═══ СЕТКА ═══
       ctx.save();
       const vx = w / 2, vy = h * 0.44;
       const HLINES = 15;
@@ -344,7 +350,7 @@ export function GlobalBackground() {
       }
       ctx.restore();
 
-      // ═══ 5. ЦИФРОВОЙ ДОЖДЬ ═══
+      // ═══ 3D-SHOP RAIN (на заднем плане, z-index: -1) ═══
       ctx.save();
       ctx.font = `bold ${FONT_SIZE}px 'Courier New', monospace`;
 
@@ -352,16 +358,16 @@ export function GlobalBackground() {
         col.y += col.speed;
         if (col.y - col.len * FONT_SIZE > h) {
           col.y = -FONT_SIZE * (5 + Math.random() * 10);
-          col.speed = 0.8 + Math.random() * 2.2;
-          col.len = 14 + Math.floor(Math.random() * 12);
-          col.chars = Array.from({ length: 24 }, () => Math.random() > 0.5 ? "1" : "0");
-          col.alpha = 0.25 + Math.random() * 0.45;
+          col.speed = 0.6 + Math.random() * 1.8;
+          col.len = 10 + Math.floor(Math.random() * 10);
+          col.chars = Array.from({ length: 20 }, randomShopChar);
+          col.alpha = 0.18 + Math.random() * 0.32;
         }
 
-        // случайно меняем символы
-        if (frame % 7 === 0) {
+        // Случайно обновляем один символ
+        if (frame % 9 === 0) {
           const idx = Math.floor(Math.random() * col.chars.length);
-          col.chars[idx] = Math.random() > 0.5 ? "1" : "0";
+          col.chars[idx] = randomShopChar();
         }
 
         for (let idx = 0; idx < col.len; idx++) {
@@ -372,23 +378,22 @@ export function GlobalBackground() {
           const char = col.chars[idx % col.chars.length];
 
           if (idx === 0) {
-            // Ведущий символ — яркий с glow
             ctx.shadowColor = "#e040fb";
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 12;
             ctx.globalAlpha = col.alpha;
             ctx.fillStyle = "#f5d0fe";
-          } else if (idx < 4) {
+          } else if (idx < 3) {
             ctx.shadowColor = "#c026d3";
-            ctx.shadowBlur = 6;
-            ctx.globalAlpha = col.alpha * 0.82;
+            ctx.shadowBlur = 5;
+            ctx.globalAlpha = col.alpha * 0.80;
             ctx.fillStyle = "#d946ef";
-          } else if (idx < 9) {
+          } else if (idx < 7) {
             ctx.shadowBlur = 0;
-            ctx.globalAlpha = col.alpha * (1 - fadeRatio) * 0.65;
+            ctx.globalAlpha = col.alpha * (1 - fadeRatio) * 0.60;
             ctx.fillStyle = "#9333ea";
           } else {
             ctx.shadowBlur = 0;
-            ctx.globalAlpha = col.alpha * (1 - fadeRatio) * 0.28;
+            ctx.globalAlpha = col.alpha * (1 - fadeRatio) * 0.25;
             ctx.fillStyle = "#4c1d95";
           }
 
@@ -414,7 +419,7 @@ export function GlobalBackground() {
         }
       });
 
-      // ═══ 6. КОСМОС: звёзды ═══
+      // ═══ ЗВЁЗДЫ ═══
       STARS.forEach(s => {
         s.tw += s.speed;
         const a = s.alpha * (0.35 + 0.65 * Math.sin(s.tw));
@@ -424,7 +429,7 @@ export function GlobalBackground() {
         ctx.fill(); ctx.globalAlpha = 1;
       });
 
-      // ═══ 2. ЧАСТИЦЫ + СОЕДИНЕНИЯ + МЫШЬ ═══
+      // ═══ ЧАСТИЦЫ + СОЕДИНЕНИЯ + МЫШЬ ═══
       const mouse = mouseRef.current;
 
       particles.forEach(p => {
@@ -448,7 +453,6 @@ export function GlobalBackground() {
         ctx.globalAlpha = a; ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1;
       });
 
-      // Соединения между частицами
       const CONN_DIST = isMobile ? 75 : 110;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -464,7 +468,6 @@ export function GlobalBackground() {
         }
       }
 
-      // Соединения с мышью
       if (mouse.x > 0 && mouse.x < w) {
         particles.forEach(p => {
           const dx = p.x - mouse.x, dy = p.y - mouse.y;
@@ -476,7 +479,6 @@ export function GlobalBackground() {
           }
         });
 
-        // Glow под мышью
         const mg = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 80);
         mg.addColorStop(0, "rgba(168,85,247,0.08)");
         mg.addColorStop(1, "transparent");

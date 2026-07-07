@@ -41,25 +41,27 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
       className="group relative cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative rounded-2xl overflow-hidden border border-border/50 bg-card/50 hover:border-primary/40 transition-all duration-300 shadow-lg hover:shadow-primary/10 hover:shadow-2xl">
+      <div className="relative rounded-2xl overflow-hidden glass-card glass-card-hover transition-all duration-300 shadow-lg">
         {badgeStyle && (
           <div className={`absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badgeStyle}`}>
             {product.badge}
           </div>
         )}
         {!product.in_stock && (
-          <div className="absolute inset-0 z-10 bg-black/60 flex items-center justify-center">
-            <span className="text-white font-bold text-sm bg-black/80 px-3 py-1 rounded-full">Нет в наличии</span>
+          <div className="absolute inset-0 z-10 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+            <span className="text-white font-bold text-sm glass-card px-4 py-2 rounded-full">Нет в наличии</span>
           </div>
         )}
-        <div className="aspect-square overflow-hidden bg-black/20">
+        <div className="aspect-square overflow-hidden bg-black/30">
           <img src={product.image_url} alt={product.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          {/* Purple glow on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/0 to-transparent group-hover:from-purple-900/20 transition-all duration-300 pointer-events-none" />
         </div>
         <div className="p-4">
-          <h3 className="font-display font-bold text-base text-white mb-1 line-clamp-1">{product.title}</h3>
+          <h3 className="font-display font-bold text-base text-white mb-1 line-clamp-1 group-hover:text-purple-200 transition-colors">{product.title}</h3>
           {product.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 leading-relaxed">{product.description}</p>
           )}
           <div className="flex items-center justify-between">
             <div>
@@ -67,7 +69,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
                 <div className="text-muted-foreground text-xs line-through">{product.price} ₽</div>
               )}
               {(product.price || product.discount_price) && (
-                <div className="text-primary font-bold text-lg">
+                <div className="text-primary font-bold text-lg leading-none">
                   {product.discount_price || product.price} ₽
                 </div>
               )}
@@ -75,7 +77,7 @@ function ProductCard({ product, onClick }: { product: Product; onClick: () => vo
             {product.external_link && (
               <a href={product.external_link} target="_blank" rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
-                className="flex items-center gap-1 text-xs bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full transition-colors font-medium">
+                className="flex items-center gap-1 text-xs bg-primary/12 hover:bg-primary/22 text-primary px-3 py-1.5 rounded-full transition-colors font-medium border border-primary/20">
                 Купить <ExternalLink className="w-3 h-3" />
               </a>
             )}
@@ -96,21 +98,23 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="relative max-w-3xl w-full bg-card border border-border/50 rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="relative max-w-3xl w-full glass-card rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(147,51,234,0.25)] max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center hover:bg-background transition-colors">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <button onClick={onClose} className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-primary/30 transition-colors">
           <X className="w-4 h-4" />
         </button>
         <div className="grid md:grid-cols-2 gap-0">
-          <div className="bg-black/20">
+          <div className="bg-black/30">
             <div className="aspect-square overflow-hidden">
               <img src={activeImg} alt={product.title} className="w-full h-full object-cover" />
             </div>
@@ -118,7 +122,7 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
               <div className="flex gap-2 p-3 overflow-x-auto">
                 {allImages.map((img, i) => (
                   <button key={i} onClick={() => setActiveImg(img)}
-                    className={`w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-colors ${activeImg === img ? "border-primary" : "border-transparent"}`}>
+                    className={`w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition-colors ${activeImg === img ? "border-primary shadow-[0_0_10px_rgba(147,51,234,0.5)]" : "border-white/10"}`}>
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -152,7 +156,7 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
               )}
               {product.external_link && product.in_stock && (
                 <a href={product.external_link} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white font-bold transition-all hover:scale-105">
+                  className="flex items-center justify-center gap-2 w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white font-bold transition-all hover:scale-105 shadow-[0_0_20px_rgba(147,51,234,0.4)]">
                   <ShoppingBag className="w-4 h-4" /> Перейти к покупке <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
@@ -179,41 +183,45 @@ export default function Shop() {
 
       {/* HERO */}
       <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#03000a]/55 via-[#03000a]/40 to-[#03000a]/60" />
-        <div className="absolute inset-0 bg-industrial-grid opacity-40" />
-        <div className="absolute top-1/2 left-0 w-96 h-96 rounded-full bg-purple-800/25 blur-[120px] pointer-events-none -translate-y-1/2" />
-        <div className="absolute top-1/2 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-[100px] pointer-events-none -translate-y-1/2" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-industrial-grid opacity-30" />
+        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-purple-800/18 blur-[140px] pointer-events-none -translate-y-1/2 ambient-glow" />
+        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-violet-600/14 blur-[120px] pointer-events-none -translate-y-1/2 ambient-glow" style={{ animationDelay: "2s" }} />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+
         <div className="container relative z-10 mx-auto px-4 md:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left">
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/40 bg-primary/10 text-primary text-sm font-bold mb-6 uppercase tracking-wider">
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/35 bg-primary/8 backdrop-blur-sm text-primary text-sm font-bold mb-6 uppercase tracking-wider">
                 <Star className="w-3.5 h-3.5 fill-current" /> Эксклюзивная коллекция
               </motion.div>
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                className="text-5xl md:text-7xl font-black font-display uppercase mb-4 leading-none">
-                KILLER<br /><span className="text-primary">BUNNY</span><sup className="text-2xl align-super">™</sup>
+                className="text-5xl md:text-7xl font-black font-display uppercase mb-4 leading-none"
+                style={{ filter: "drop-shadow(0 0 24px rgba(147,51,234,0.4))" }}>
+                KILLER<br /><span className="text-primary" style={{ filter: "drop-shadow(0 0 20px rgba(147,51,234,0.8))" }}>BUNNY</span><sup className="text-2xl align-super">™</sup>
               </motion.h1>
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="text-muted-foreground text-lg max-w-md mb-8">
+                className="text-muted-foreground text-lg max-w-md mb-8 leading-relaxed">
                 Коллекционные виниловые фигурки. Каждая — уникальный характер. Премиум-материал, высота 25 см.
               </motion.p>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-                className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card/50 border border-border/50 text-sm">
-                  <Zap className="w-4 h-4 text-primary" /> <span>Ограниченный тираж</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card/50 border border-border/50 text-sm">
-                  <Package className="w-4 h-4 text-primary" /> <span>Высота 25 см</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card/50 border border-border/50 text-sm">
-                  <Star className="w-4 h-4 text-primary" /> <span>Премиум-винил</span>
-                </div>
+                className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                {[
+                  { icon: <Zap className="w-4 h-4 text-primary" />, text: "Ограниченный тираж" },
+                  { icon: <Package className="w-4 h-4 text-primary" />, text: "Высота 25 см" },
+                  { icon: <Star className="w-4 h-4 text-primary" />, text: "Премиум-винил" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl glass-card text-sm">
+                    {item.icon} <span>{item.text}</span>
+                  </div>
+                ))}
               </motion.div>
             </div>
             <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: "spring" }}
               className="flex-shrink-0 w-full max-w-sm lg:max-w-md">
-              <div className="relative rounded-2xl overflow-hidden border border-primary/30 shadow-[0_0_80px_rgba(147,51,234,0.25)]">
+              <div className="relative rounded-2xl overflow-hidden border border-primary/25 shadow-[0_0_80px_rgba(147,51,234,0.3)]">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none z-10" />
                 <img src={killerBunnyCollection} alt="Killer Bunny Collection Series 01" className="w-full" />
               </div>
             </motion.div>
@@ -221,8 +229,11 @@ export default function Shop() {
         </div>
       </section>
 
+      {/* Section divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+
       {/* CATALOG */}
-      <section className="py-20 bg-transparent">
+      <section className="py-20">
         <div className="container mx-auto px-4 md:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-black font-display uppercase mb-3">
@@ -247,14 +258,22 @@ export default function Shop() {
         </div>
       </section>
 
+      {/* Section divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-purple-500/15 to-transparent" />
+
       {/* SERIES INFO */}
-      <section className="py-16 bg-primary/5 border-t border-primary/20">
+      <section className="py-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-950/12 to-transparent pointer-events-none" />
         <div className="container mx-auto px-4 md:px-8 text-center">
-          <motion.h3 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="text-2xl md:text-3xl font-black font-display uppercase mb-3">
-            Совместный проект<br /><span className="text-primary">Killer Bunny™ × Bruce 3D Shop</span>
-          </motion.h3>
-          <p className="text-muted-foreground max-w-xl mx-auto">Собери всю коллекцию Series 01. Ограниченный тираж — 200 экземпляров.</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="max-w-2xl mx-auto glass-card rounded-3xl p-8 md:p-10 relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-60 h-20 bg-purple-700/15 blur-3xl pointer-events-none" />
+            <h3 className="relative z-10 text-2xl md:text-3xl font-black font-display uppercase mb-3">
+              Совместный проект<br /><span className="text-primary">Killer Bunny™ × Bruce 3D Shop</span>
+            </h3>
+            <p className="relative z-10 text-muted-foreground max-w-xl mx-auto leading-relaxed">Собери всю коллекцию Series 01. Ограниченный тираж — 200 экземпляров.</p>
+          </motion.div>
         </div>
       </section>
 

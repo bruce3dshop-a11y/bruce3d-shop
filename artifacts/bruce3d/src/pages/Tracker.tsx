@@ -61,22 +61,25 @@ export default function Tracker() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
 
       {/* HERO */}
-      <section className="relative py-20 md:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#03000a]/55 via-[#03000a]/40 to-[#03000a]/60" />
-        <div className="absolute inset-0 bg-industrial-grid opacity-40" />
-        <div className="absolute top-1/2 left-0 w-96 h-96 rounded-full bg-purple-800/25 blur-[120px] pointer-events-none -translate-y-1/2" />
-        <div className="absolute top-1/2 right-0 w-80 h-80 rounded-full bg-violet-600/20 blur-[100px] pointer-events-none -translate-y-1/2" />
+      <section className="relative py-24 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-industrial-grid opacity-30" />
+        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-purple-800/18 blur-[140px] pointer-events-none -translate-y-1/2 ambient-glow" />
+        <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-violet-600/14 blur-[120px] pointer-events-none -translate-y-1/2 ambient-glow" style={{ animationDelay: "3.5s" }} />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+
         <div className="container relative z-10 mx-auto px-4 md:px-8 text-center max-w-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
+          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }}
+            className="w-16 h-16 rounded-2xl glass-card border-primary/25 flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(147,51,234,0.3)]">
             <Search className="w-8 h-8 text-primary" />
-          </div>
+          </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-6xl font-black font-display uppercase mb-4 leading-none"
-            style={{ background: "linear-gradient(135deg,#fff 0%,#c084fc 70%,#9333ea 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            className="text-5xl md:text-6xl font-black font-display uppercase mb-5 leading-none"
+            style={{ background: "linear-gradient(135deg,#fff 0%,#c084fc 70%,#9333ea 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", filter: "drop-shadow(0 0 24px rgba(147,51,234,0.4))" }}>
             Трекер заказа
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="text-muted-foreground text-lg mb-8">
+            className="text-muted-foreground text-base md:text-lg mb-8 leading-relaxed">
             Введите номер заказа, чтобы узнать статус
           </motion.p>
 
@@ -87,28 +90,37 @@ export default function Tracker() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleTrack()}
-              className="bg-card/50 border-primary/20 text-base h-12"
+              className="bg-black/30 backdrop-blur-sm border-white/10 focus:border-primary/40 text-base h-12"
             />
-            <Button onClick={handleTrack} disabled={loading} className="rounded-full h-12 px-6 shrink-0">
-              {loading ? <div className="w-4 h-4 border-2 border-primary-foreground/60 border-t-transparent rounded-full animate-spin" /> : <><Search className="w-4 h-4 mr-2" /> Найти</>}
+            <Button onClick={handleTrack} disabled={loading}
+              className="rounded-full h-12 px-6 shrink-0 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_30px_rgba(147,51,234,0.5)]">
+              {loading
+                ? <div className="w-4 h-4 border-2 border-primary-foreground/60 border-t-transparent rounded-full animate-spin" />
+                : <><Search className="w-4 h-4 mr-2" /> Найти</>
+              }
             </Button>
           </motion.div>
         </div>
       </section>
 
-      <section className="relative z-10 py-16 bg-transparent">
+      {/* Section divider */}
+      <div className="h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+
+      <section className="relative z-10 py-16">
         <div className="container mx-auto px-4 md:px-8 max-w-2xl">
           <AnimatePresence mode="wait">
             {error && (
               <motion.div key="error" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-center">
+                className="p-4 rounded-2xl glass-card border-red-500/25 text-red-400 text-center">
                 {error}
               </motion.div>
             )}
 
             {result && sc && (
               <motion.div key="result" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
-                <div className={`rounded-2xl border p-6 bg-gradient-to-br from-primary/5 to-transparent ${sc.color.split(" ").find(c => c.startsWith("border-")) || "border-primary/30"}`}>
+                {/* Status card */}
+                <div className="rounded-2xl glass-card p-6 relative overflow-hidden">
+                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
                   <div className="flex items-start gap-4">
                     <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${sc.color}`}>
                       {sc.icon}
@@ -116,7 +128,7 @@ export default function Tracker() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-display font-black text-2xl">#{result.order_number}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${sc.color}`}>{sc.label}</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${sc.color}`}>{sc.label}</span>
                       </div>
                       <p className="text-muted-foreground text-sm mb-2">{sc.desc}</p>
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -132,15 +144,20 @@ export default function Tracker() {
 
                 {/* Progress bar */}
                 {!["rejected"].includes(result.status) && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent border border-primary/15">
+                  <div className="p-5 rounded-2xl glass-card relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                     <div className="flex items-center gap-1 mb-3 overflow-x-auto pb-1">
                       {STEPS.slice(0, -1).map((step, i) => (
                         <div key={step} className="flex items-center gap-1 shrink-0">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${i <= currentStepIdx ? "bg-primary border-primary text-white" : "border-primary/20 text-muted-foreground"}`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
+                            i <= currentStepIdx
+                              ? "bg-primary border-primary text-white shadow-[0_0_10px_rgba(147,51,234,0.5)]"
+                              : "border-white/10 text-muted-foreground"
+                          }`}>
                             {i < currentStepIdx ? "✓" : i + 1}
                           </div>
                           {i < STEPS.length - 2 && (
-                            <div className={`h-0.5 w-6 transition-all ${i < currentStepIdx ? "bg-primary" : "bg-primary/15"}`} />
+                            <div className={`h-0.5 w-5 transition-all ${i < currentStepIdx ? "bg-primary" : "bg-white/8"}`} />
                           )}
                         </div>
                       ))}
@@ -153,20 +170,21 @@ export default function Tracker() {
 
                 {/* History */}
                 {result.history && result.history.length > 0 && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent border border-primary/15">
-                    <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <div className="p-5 rounded-2xl glass-card relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
                       <ArrowRight className="w-4 h-4 text-primary" /> История статусов
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {[...result.history].reverse().map((h, i) => {
                         const hsc = STATUS_CONFIG[h.status] || STATUS_CONFIG.new;
                         return (
                           <div key={i} className="flex items-start gap-3 text-sm">
-                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${i === 0 ? "bg-primary" : "bg-muted"}`} />
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${i === 0 ? "bg-primary shadow-[0_0_6px_rgba(147,51,234,0.8)]" : "bg-white/20"}`} />
                             <div className="flex-1">
                               <span className="font-medium">{hsc.label}</span>
                               {h.comment && <span className="text-muted-foreground ml-2">— {h.comment}</span>}
-                              <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString("ru")}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{new Date(h.created_at).toLocaleString("ru")}</div>
                             </div>
                           </div>
                         );
