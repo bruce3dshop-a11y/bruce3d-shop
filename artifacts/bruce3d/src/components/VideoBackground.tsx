@@ -153,14 +153,18 @@ export function GlobalBackground() {
 
     function initRain() {
       const count = Math.floor(w / COL_GAP);
-      rain = Array.from({ length: count }, (_, i) => ({
-        x: i * COL_GAP + COL_GAP / 2,
-        y: Math.random() * h * -2,
-        speed: 0.8 + Math.random() * 2.2,
-        chars: Array.from({ length: 24 }, () => Math.random() > 0.5 ? "1" : "0"),
-        alpha: 0.25 + Math.random() * 0.45,
-        len: 14 + Math.floor(Math.random() * 12),
-      }));
+      rain = Array.from({ length: count }, (_, i) => {
+        // Треть колонн — уже на экране сразу, остальные — выше
+        const startOnScreen = i % 3 !== 0;
+        return {
+          x: i * COL_GAP + COL_GAP / 2,
+          y: startOnScreen ? Math.random() * h : -Math.random() * h * 1.5,
+          speed: 0.8 + Math.random() * 2.2,
+          chars: Array.from({ length: 24 }, () => Math.random() > 0.5 ? "1" : "0"),
+          alpha: 0.25 + Math.random() * 0.45,
+          len: 14 + Math.floor(Math.random() * 12),
+        };
+      });
     }
     initRain();
 

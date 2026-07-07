@@ -81,7 +81,7 @@ export default function Home() {
         <VideoBackground />
 
         {/* Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-background pointer-events-none z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/10 to-transparent pointer-events-none z-[1]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_40%,rgba(147,51,234,0.14),transparent)] pointer-events-none z-[1]" />
         <div className="absolute inset-0 pointer-events-none z-[1] opacity-25" style={{
           backgroundImage: "linear-gradient(rgba(147,51,234,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(147,51,234,0.08) 1px, transparent 1px)",

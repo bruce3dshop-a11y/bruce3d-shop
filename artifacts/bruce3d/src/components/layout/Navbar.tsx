@@ -29,7 +29,7 @@ function LangToggle({ dark }: { dark?: boolean }) {
   );
 }
 
-// Маленький канвас-фон для мобильного меню
+// Канвас-фон мобильного меню: дым + частицы + дождь
 function MenuCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -37,31 +37,98 @@ function MenuCanvas() {
     const ctx = c.getContext("2d"); if (!ctx) return;
     let id: number;
     let w = (c.width = c.offsetWidth), h = (c.height = c.offsetHeight);
-    const pts = Array.from({ length: 30 }, () => ({
+
+    // Smoke orbs (неоновый дым)
+    const smoke = [
+      { xF: 0.15, yF: 0.15, r: 160, color: "#7c3aed", phase: 0,   spd: 0.004 },
+      { xF: 0.85, yF: 0.45, r: 140, color: "#9333ea", phase: 2.1, spd: 0.003 },
+      { xF: 0.50, yF: 0.80, r: 120, color: "#a855f7", phase: 4.2, spd: 0.005 },
+      { xF: 0.10, yF: 0.65, r: 100, color: "#c026d3", phase: 1.5, spd: 0.006 },
+      { xF: 0.80, yF: 0.90, r: 110, color: "#6d28d9", phase: 3.3, spd: 0.004 },
+    ].map(o => ({ ...o, x: w * o.xF, y: h * o.yF }));
+
+    // Частицы
+    const pts = Array.from({ length: 35 }, () => ({
       x: Math.random() * w, y: Math.random() * h,
-      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 1.4 + 0.3, alpha: Math.random() * 0.4 + 0.1,
+      vx: (Math.random() - 0.5) * 0.28, vy: (Math.random() - 0.5) * 0.28,
+      r: Math.random() * 1.3 + 0.2, alpha: Math.random() * 0.45 + 0.1,
       tw: Math.random() * Math.PI * 2,
     }));
+
+    // Мини цифровой дождь
+    const FONT = 10;
+    const GAP = FONT * 1.5;
+    const cols = Math.floor(w / GAP);
+    const rain = Array.from({ length: cols }, (_, i) => ({
+      x: i * GAP + GAP / 2,
+      y: Math.random() > 0.5 ? Math.random() * h : -Math.random() * h,
+      speed: 0.6 + Math.random() * 1.4,
+      alpha: 0.18 + Math.random() * 0.22,
+      len: 8 + Math.floor(Math.random() * 8),
+      chars: Array.from({ length: 16 }, () => Math.random() > 0.5 ? "1" : "0"),
+    }));
+
     let t = 0;
     const draw = () => {
-      t += 0.018; ctx.clearRect(0, 0, w, h);
-      // Glow orbs
-      [[0.1, 0.1, "#7c3aed"], [0.9, 0.9, "#9333ea"], [0.5, 0.5, "#a855f7"]].forEach(([xf, yf, col]) => {
-        const ox = Number(xf) * w + Math.sin(t * 0.4 + Number(xf)) * 20;
-        const oy = Number(yf) * h + Math.cos(t * 0.3 + Number(yf)) * 15;
-        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 120);
-        g.addColorStop(0, String(col) + "22"); g.addColorStop(1, "transparent");
-        ctx.beginPath(); ctx.arc(ox, oy, 120, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+      t += 0.018;
+      ctx.clearRect(0, 0, w, h);
+
+      // ── Неоновый дым ──
+      smoke.forEach(o => {
+        for (let layer = 0; layer < 3; layer++) {
+          const lr = o.r * (1 - layer * 0.28) * (1 + 0.1 * Math.sin(t * o.spd * 40 + layer));
+          const lx = o.x + Math.sin(t * o.spd * 2.2 + o.phase + layer) * 25;
+          const ly = o.y + Math.cos(t * o.spd * 1.8 + o.phase + layer) * 18;
+          const ops = ["55","28","10"][layer];
+          const opf = ["1a","0a","04"][layer];
+          const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+          g.addColorStop(0, o.color + ops);
+          g.addColorStop(0.45, o.color + opf);
+          g.addColorStop(1, "transparent");
+          ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+          ctx.fillStyle = g; ctx.fill();
+        }
       });
+
+      // ── Цифровой дождь ──
+      ctx.save();
+      ctx.font = `bold ${FONT}px monospace`;
+      rain.forEach(col => {
+        col.y += col.speed;
+        if (col.y - col.len * FONT > h) {
+          col.y = -FONT * (3 + Math.random() * 6);
+          col.chars = Array.from({ length: 16 }, () => Math.random() > 0.5 ? "1" : "0");
+        }
+        col.chars.slice(0, col.len).forEach((ch, idx) => {
+          const cy = col.y - idx * FONT;
+          if (cy < -FONT || cy > h + FONT) return;
+          const fade = 1 - idx / col.len;
+          if (idx === 0) {
+            ctx.shadowColor = "#e040fb"; ctx.shadowBlur = 8;
+            ctx.globalAlpha = col.alpha; ctx.fillStyle = "#f0abfc";
+          } else if (idx < 3) {
+            ctx.shadowColor = "#a855f7"; ctx.shadowBlur = 4;
+            ctx.globalAlpha = col.alpha * 0.7; ctx.fillStyle = "#c084fc";
+          } else {
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = col.alpha * fade * 0.4; ctx.fillStyle = "#7c3aed";
+          }
+          ctx.fillText(ch, col.x - FONT / 2, cy);
+          ctx.shadowBlur = 0;
+        });
+      });
+      ctx.restore();
+
+      // ── Частицы ──
       pts.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.tw += 0.025;
+        p.x += p.vx; p.y += p.vy; p.tw += 0.03;
         if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
         if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.globalAlpha = p.alpha * (0.4 + 0.6 * Math.sin(p.tw));
         ctx.fillStyle = "#a855f7"; ctx.fill(); ctx.globalAlpha = 1;
       });
+
       id = requestAnimationFrame(draw);
     };
     draw();
