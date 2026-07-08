@@ -93,7 +93,6 @@ import { Router } from "express";
         return res.status(503).json({ error: "ADMIN_PASSWORD не задан на сервере. Установите его в Railway." });
       }
       const { login, password } = req.body;
-      // Проверяем логин, если задана переменная ADMIN_LOGIN
       if (ADMIN_LOGIN_ENV) {
         const _la = createHmac("sha256", "bruce3d-login-check").update(String(login ?? "")).digest();
         const _lb = createHmac("sha256", "bruce3d-login-check").update(String(ADMIN_LOGIN_ENV)).digest();
@@ -101,25 +100,63 @@ import { Router } from "express";
           return res.status(401).json({ error: "Неверный логин или пароль" });
         }
       }
-      const _a = createHmac("sha256", "bruce3d-check").update(String(password)).digest();
-      const _b = createHmac("sha256", "bruce3d-check").update(String(ADMIN_PASSWORD)).digest();
-      if (!timingSafeEqual(_a, _b)) return res.status(401).json({ error: "Неверный логин или пароль" });
-
-      // Set cookie (works same-domain; may not work cross-domain with SameSite=lax)
+      const _pa = createHmac("sha256", "bruce3d-admin-check").update(String(password ?? "")).digest();
+      const _pb = createHmac("sha256", "bruce3d-admin-check").update(String(ADMIN_PASSWORD)).digest();
+      if (_pa.length !== _pb.length || !timingSafeEqual(_pa, _pb)) {
+        return res.status(401).json({ error: "Неверный логин или пароль" });
+      }
       setAdminSession(res);
-
-      // Also return a signed token for X-Admin-Token header (works cross-domain always)
-      const adminToken = makeAdminToken(ADMIN_PASSWORD);
-      res.json({ ok: true, token: adminToken });
+      res.json({ ok: true });
     } catch {
       res.status(500).json({ error: "Ошибка входа" });
     }
   });
 
-  router.post("/logout", (_req, res) => {
+  router.post("/logout", (req, res) => {
     clearSessionUser(res);
     res.json({ ok: true });
   });
 
+  // ─── PUT /auth/profile — обновление профиля ───────────────────────────────
+  router.put("/profile", async (req, res) => {
+    try {
+      const user = await getSessionUser(req);
+      if (!user) return res.status(401).json({ error: "Не авторизован" });
+
+      const {
+        name, phone, telegram, avatar_url,
+        saved_city, saved_address, saved_index, saved_full_name,
+        password, password_new,
+      } = req.body as Record<string, string | undefined>;
+
+      const updates: Record<string, any> = {};
+      if (name?.trim()) updates.name = name.trim();
+      if (phone !== undefined) updates.phone = phone || null;
+      if (telegram !== undefined) updates.telegram = telegram || null;
+      if (avatar_url !== undefined) updates.avatar_url = avatar_url || null;
+      if (saved_city !== undefined) updates.saved_city = saved_city || null;
+      if (saved_address !== undefined) updates.saved_address = saved_address || null;
+      if (saved_index !== undefined) updates.saved_index = saved_index || null;
+      if (saved_full_name !== undefined) updates.saved_full_name = saved_full_name || null;
+
+      // Смена пароля
+      if (password && password_new) {
+        if (password_new.length < 6) return res.status(400).json({ error: "Новый пароль минимум 6 символов" });
+        const ok = await bcrypt.compare(password, user.password_hash || "");
+        if (!ok) return res.status(400).json({ error: "Неверный текущий пароль" });
+        updates.password_hash = await bcrypt.hash(password_new, 10);
+      }
+
+      if (Object.keys(updates).length === 0) return res.json({ ok: true });
+
+      updates.updated_at = new Date();
+      const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, user.id)).returning();
+      const { password_hash: _, ...safeUser } = updated;
+      res.json({ ok: true, user: safeUser });
+    } catch (e) {
+      console.error("[auth/profile]", e);
+      res.status(500).json({ error: "Ошибка сохранения профиля" });
+    }
+  });
+
   export default router;
-  
