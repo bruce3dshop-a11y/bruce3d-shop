@@ -414,6 +414,81 @@ ${sep}${adminLink}`;
       }
     });
 
+    /** PATCH /:id — клиент дополняет заказ (статус new/accepted) */
+    router.patch("/:id", async (req, res) => {
+      try {
+        const orderId = Number(req.params.id);
+        if (!orderId) return res.status(400).json({ error: "Invalid order id" });
+        const sessionUser = await getSessionUser(req);
+        const adminAccess = isAdminSession(req);
+        if (!sessionUser && !adminAccess) return res.status(401).json({ error: "Не авторизован" });
+        const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
+        if (!order) return res.status(404).json({ error: "Заказ не найден" });
+        if (!adminAccess && order.user_id !== sessionUser?.id) return res.status(403).json({ error: "Нет доступа" });
+        if (!adminAccess && !["new", "accepted"].includes(order.status)) {
+          return res.status(409).json({ error: "Заказ нельзя редактировать на этом этапе" });
+        }
+
+        const { fields, files: uploadedFiles } = await parseMultipart(req);
+        const { extraDesc, addServices, addMaterials } = fields;
+
+        const updates: Record<string, any> = { updated_at: new Date() };
+
+        if (extraDesc?.trim()) {
+          updates.description = order.description + "\n\n[Дополнение клиента]:\n" + extraDesc.trim();
+        }
+        if (addServices?.trim()) {
+          const existing = order.service_type.split(",").map((s: string) => s.trim()).filter(Boolean);
+          const added = addServices.split(",").map((s: string) => s.trim()).filter(Boolean);
+          updates.service_type = Array.from(new Set([...existing, ...added])).join(", ");
+        }
+        if (addMaterials?.trim()) {
+          const existing = order.material.split(",").map((s: string) => s.trim()).filter(Boolean);
+          const added = addMaterials.split(",").map((s: string) => s.trim()).filter(Boolean);
+          updates.material = Array.from(new Set([...existing, ...added])).join(", ");
+        }
+
+        // Загружаем новые файлы
+        const newFileUrls: { url: string; name: string }[] = [];
+        if (uploadedFiles.length > 0 && isStorageConfigured()) {
+          for (const file of uploadedFiles) {
+            try {
+              const url = await uploadBuffer(file.buffer, file.originalname, file.mimetype, "orders");
+              newFileUrls.push({ url, name: file.originalname });
+            } catch (e) { console.error("[order update upload]", e); }
+          }
+        }
+        if (newFileUrls.length > 0) {
+          let existing: { url: string; name: string }[] = [];
+          try { if (order.file_name) { const p = JSON.parse(order.file_name); if (Array.isArray(p)) existing = p; } } catch {}
+          updates.file_name = JSON.stringify([...existing, ...newFileUrls]);
+          if (adminChatId) {
+            for (const f of newFileUrls) {
+              sendTelegramDocumentByUrl(adminChatId, f.url, `📎 Доп. файл к заказу #${order.order_number}: <b>${f.name}</b>`).catch(console.error);
+            }
+          }
+        }
+
+        if (Object.keys(updates).length <= 1) return res.status(400).json({ error: "Нет данных для обновления" });
+
+        await db.update(ordersTable).set(updates).where(eq(ordersTable.id, orderId));
+
+        if (adminChatId) {
+          const changes: string[] = [];
+          if (extraDesc?.trim()) changes.push(`📝 Доп. описание: ${extraDesc.trim().slice(0, 300)}`);
+          if (addServices?.trim()) changes.push(`🔧 Добавлены услуги: ${addServices}`);
+          if (addMaterials?.trim()) changes.push(`🧱 Добавлены материалы: ${addMaterials}`);
+          if (newFileUrls.length > 0) changes.push(`📎 Новых файлов: ${newFileUrls.length}`);
+          if (changes.length > 0) sendTelegram(adminChatId, `✏️ <b>Заказ #${order.order_number} дополнен клиентом</b>\n\n${changes.join("\n")}`).catch(console.error);
+        }
+
+        res.json({ ok: true });
+      } catch (e) {
+        console.error("[orders/patch]", e);
+        res.status(500).json({ error: "Ошибка обновления заказа" });
+      }
+    });
+
     router.post("/:id/cancel", async (req, res) => {
         try {
           const orderId = Number(req.params.id);

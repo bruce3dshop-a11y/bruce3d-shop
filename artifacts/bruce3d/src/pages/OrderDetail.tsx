@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
   import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
   import { Button } from "@/components/ui/button";
   import { Input } from "@/components/ui/input";
-  import { Send, Lock, CheckCircle, Clock, Package, Truck, XCircle, Download, CreditCard, AlertCircle, Paperclip, Star, Layers, Tag, FileText, ChevronRight, ArrowRight } from "lucide-react";
+  import { Send, Lock, CheckCircle, Clock, Package, Truck, XCircle, Download, CreditCard, AlertCircle, Paperclip, Star, Layers, Tag, FileText, ChevronRight, ArrowRight, PenLine, Plus, ChevronDown } from "lucide-react";
   import { useToast } from "@/hooks/use-toast";
   import { printOrderPDF } from "@/lib/printOrderPDF";
   import { getUploadSignature, uploadFileToCloudinary } from "@/lib/cloudinary";
@@ -20,6 +20,7 @@ import { useState, useEffect, useRef } from "react";
       price?: number; payment_link?: string;
       service_type: string; material: string; description: string;
       delivery_type: string; created_at: string; file_name?: string;
+      estimated_price?: string | null;
     };
     paymentPaid: boolean;
     history: StatusEntry[];
@@ -96,6 +97,13 @@ import { useState, useEffect, useRef } from "react";
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFile, setUploadingFile] = useState(false);
+    const [updateOpen, setUpdateOpen] = useState(false);
+    const [extraDesc, setExtraDesc] = useState("");
+    const [addServices, setAddServices] = useState<string[]>([]);
+    const [addMaterials, setAddMaterials] = useState<string[]>([]);
+    const [newFiles, setNewFiles] = useState<File[]>([]);
+    const [updating, setUpdating] = useState(false);
+    const updateFileRef = useRef<HTMLInputElement>(null);
 
     const { data, isLoading, isError, refetch } = useQuery({
       queryKey: ["order-detail", orderId],
@@ -156,6 +164,26 @@ import { useState, useEffect, useRef } from "react";
           setCancelling(false);
         }
       };
+
+      const updateOrder = async () => {
+      if (!extraDesc.trim() && addServices.length === 0 && addMaterials.length === 0 && newFiles.length === 0) {
+        toast({ title: "Ничего не добавлено", variant: "destructive" }); return;
+      }
+      setUpdating(true);
+      try {
+        const fd = new FormData();
+        if (extraDesc.trim()) fd.append("extraDesc", extraDesc.trim());
+        if (addServices.length > 0) fd.append("addServices", addServices.join(","));
+        if (addMaterials.length > 0) fd.append("addMaterials", addMaterials.join(","));
+        for (const f of newFiles) fd.append("files", f);
+        await apiFetch(`orders/${orderId}`, { method: "PATCH", body: fd });
+        toast({ title: "Заказ дополнен!" });
+        setExtraDesc(""); setAddServices([]); setAddMaterials([]); setNewFiles([]); setUpdateOpen(false);
+        refetch();
+      } catch (err: any) {
+        toast({ title: err?.message || "Ошибка обновления", variant: "destructive" });
+      } finally { setUpdating(false); }
+    };
 
       const sendFileMessage = async (file: File) => {
       setUploadingFile(true);
@@ -253,6 +281,7 @@ import { useState, useEffect, useRef } from "react";
     // Confirm button only for clients — admin manages orders via admin panel
     const cancellableStatuses = ["new", "accepted", "calculating"];
       const canCancel = !isAdmin && cancellableStatuses.includes(order.status);
+    const canUpdate = !isAdmin && ["new", "accepted"].includes(order.status);
 
     return (
       <div className="min-h-screen bg-background">
@@ -271,11 +300,21 @@ import { useState, useEffect, useRef } from "react";
                   <ChevronRight className="w-3 h-3" />
                   <span className="text-foreground font-semibold">#{order.order_number}</span>
                 </div>
-                <Button variant="outline" size="sm"
-                  className="rounded-full border-border/40 hover:border-primary/40 hover:bg-primary/5 text-xs gap-1.5 h-8"
-                  onClick={() => printOrderPDF({ order, history })}>
-                  <Download className="w-3.5 h-3.5" /> PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                  {canCancel && (
+                    <Button variant="outline" size="sm"
+                      className="rounded-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 text-xs gap-1.5 h-8"
+                      onClick={cancelOrder} disabled={cancelling}>
+                      <XCircle className="w-3.5 h-3.5" />
+                      {cancelling ? "..." : "Отменить"}
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm"
+                    className="rounded-full border-border/40 hover:border-primary/40 hover:bg-primary/5 text-xs gap-1.5 h-8"
+                    onClick={() => printOrderPDF({ order, history })}>
+                    <Download className="w-3.5 h-3.5" /> PDF
+                  </Button>
+                </div>
               </div>
 
               {/* Order number + status */}
@@ -346,6 +385,19 @@ import { useState, useEffect, useRef } from "react";
             {/* ── LEFT COLUMN ── */}
             <div className="lg:col-span-2 space-y-4">
 
+              {/* Баннер: ожидание менеджера */}
+              {order.status === "new" && !isAdmin && (
+                <div className="rounded-2xl p-4 bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                    <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-amber-400">Заказ принят!</p>
+                    <p className="text-sm text-amber-400/70 mt-0.5 leading-snug">Ожидайте — менеджер обрабатывает ваш заказ. Мы свяжемся с вами в ближайшее время.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Banner */}
               {hasBill && !isConfirmed && (
                 <div className="rounded-2xl p-4 bg-gradient-to-br from-primary/10 to-violet-500/10 border border-primary/20">
@@ -411,6 +463,19 @@ import { useState, useEffect, useRef } from "react";
                   </div>
                 ))}
               </div>
+
+              {/* Примерная стоимость */}
+              {order.estimated_price && !hasBill && (
+                <div className="rounded-2xl bg-card/60 border border-border/40 p-3.5 backdrop-blur-sm flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-0.5">
+                      <Tag className="w-3.5 h-3.5" /> Примерная стоимость
+                    </div>
+                    <p className="text-xs text-muted-foreground/60 leading-snug">Точная цена будет выставлена менеджером</p>
+                  </div>
+                  <span className="text-2xl font-black text-primary shrink-0">≈ {Number(order.estimated_price).toLocaleString("ru")} ₽</span>
+                </div>
+              )}
 
               {/* Description */}
               <div className="rounded-2xl bg-card/60 border border-border/40 p-4 backdrop-blur-sm">
@@ -484,13 +549,95 @@ import { useState, useEffect, useRef } from "react";
                 )}
               </div>
 
-              {/* Cancel */}
-              {canCancel && (
-                <Button variant="outline" onClick={cancelOrder} disabled={cancelling}
-                  className="w-full rounded-xl border-red-500/20 text-red-400 hover:bg-red-500/5 hover:border-red-500/40 h-10 text-sm font-medium gap-2">
-                  <XCircle className="w-4 h-4" />
-                  {cancelling ? "Отмена заказа..." : "Отменить заказ"}
-                </Button>
+              {/* Дополнить заказ */}
+              {canUpdate && (
+                <div className="rounded-2xl bg-card/60 border border-border/40 backdrop-blur-sm overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-primary/5 transition-colors"
+                    onClick={() => setUpdateOpen(v => !v)}
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-sm">
+                      <PenLine className="w-4 h-4 text-primary" /> Дополнить заказ
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${updateOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {updateOpen && (
+                    <div className="px-4 pb-4 space-y-4 border-t border-border/30">
+                      {/* Files */}
+                      <div className="pt-3">
+                        <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">Добавить файлы</p>
+                        <input ref={updateFileRef} type="file" multiple className="hidden"
+                          onChange={(e) => { const fs = Array.from(e.target.files || []); setNewFiles(prev => [...prev, ...fs]); e.target.value = ""; }} />
+                        <button onClick={() => updateFileRef.current?.click()}
+                          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 text-sm text-muted-foreground transition-all">
+                          <Plus className="w-4 h-4" /> Выбрать файлы
+                        </button>
+                        {newFiles.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {newFiles.map((f, i) => (
+                              <div key={i} className="flex items-center justify-between bg-primary/5 rounded-lg px-3 py-1.5 text-xs">
+                                <span className="truncate flex-1">{f.name}</span>
+                                <button onClick={() => setNewFiles(p => p.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-red-400 ml-2">✕</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Extra description */}
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">Дополнительное описание</p>
+                        <textarea
+                          value={extraDesc}
+                          onChange={(e) => setExtraDesc(e.target.value)}
+                          placeholder="Уточнения, пожелания, исправления..."
+                          rows={3}
+                          className="w-full rounded-xl bg-background/60 border border-border/50 px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 resize-none"
+                        />
+                      </div>
+                      {/* Services */}
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">Добавить услуги</p>
+                        <div className="flex flex-wrap gap-2">
+                          {[{k:"3d-print",l:"3D Печать"},{k:"3d-modeling",l:"Моделирование"},{k:"3d-scanning",l:"Сканирование"},{k:"repair",l:"Ремонт"}].map(s => {
+                            const active = addServices.includes(s.k);
+                            return (
+                              <button key={s.k}
+                                onClick={() => setAddServices(p => active ? p.filter(x => x !== s.k) : [...p, s.k])}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${active ? "bg-primary/20 border-primary/50 text-primary" : "bg-card/60 border-border/40 text-muted-foreground hover:border-primary/30"}`}>
+                                {s.l}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* Materials */}
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wide">Добавить материалы</p>
+                        <div className="flex flex-wrap gap-2">
+                          {["PLA","ABS","PETG","TPU","RESIN","Нейлон"].map(m => {
+                            const active = addMaterials.includes(m);
+                            return (
+                              <button key={m}
+                                onClick={() => setAddMaterials(p => active ? p.filter(x => x !== m) : [...p, m])}
+                                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${active ? "bg-violet-500/20 border-violet-500/40 text-violet-300" : "bg-card/60 border-border/40 text-muted-foreground hover:border-violet-400/30"}`}>
+                                {m}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* Submit */}
+                      <button
+                        onClick={updateOrder}
+                        disabled={updating || (!extraDesc.trim() && addServices.length === 0 && addMaterials.length === 0 && newFiles.length === 0)}
+                        className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground font-semibold text-sm transition-all flex items-center justify-center gap-2">
+                        {updating
+                          ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Сохранение...</>
+                          : <><PenLine className="w-4 h-4" /> Сохранить дополнения</>}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
