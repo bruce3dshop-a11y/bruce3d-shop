@@ -98,7 +98,8 @@ import { broadcastOrderUpdate } from "./chat";
         delivery_full_name?: string | null; delivery_phone?: string | null;
       },
       fileUrls?: { url: string; originalName: string }[],
-      rawFileCount?: number
+      rawFileCount?: number,
+      estimate?: { price: number; weight?: number; fill?: number; qty?: number }
     ) {
       const chatId = adminChatId;
       if (!chatId) return;
@@ -139,6 +140,12 @@ import { broadcastOrderUpdate } from "./chat";
         : "";
 
       const sep = "━━━━━━━━━━━━━━━━━━";
+      const estimateLine = estimate?.price
+        ? `\n💰 <b>Примерная стоимость: ${estimate.price.toLocaleString("ru")} ₽</b>` +
+          (estimate.weight ? ` · ${estimate.weight} г` : "") +
+          (estimate.fill ? ` · заполнение ${estimate.fill}%` : "") +
+          (estimate.qty && estimate.qty > 1 ? ` · ${estimate.qty} шт` : "")
+        : "";
       const text = `🆕 <b>Новый заказ #${order.order_number}</b>
 
 👤 <b>${order.name}</b>
@@ -146,7 +153,7 @@ ${contact}
 ${sep}
 🔧 <b>Услуга:</b> ${service}
 🧱 <b>Материал:</b> ${order.material.toUpperCase()}
-${deliveryLine}
+${deliveryLine}${estimateLine}
 ${sep}
 📝 <b>Описание:</b>
 ${order.description.slice(0, 800)}${order.description.length > 800 ? "..." : ""}${fileNote}
@@ -160,7 +167,7 @@ ${sep}${adminLink}`;
         // Парсим multipart через busboy (multer@1.x несовместим с Express 5)
         const { fields, files: uploadedFiles } = await parseMultipart(req);
         const body = fields;
-        const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex, deliveryFullName, deliveryPhone } = body;
+        const { name, email, phone, telegram, serviceType, material, description, deliveryType, deliveryCity, deliveryAddress, deliveryIndex, deliveryFullName, deliveryPhone, estimatedPrice, estimatedWeight, estimatedFill, estimatedQty } = body;
         if (!name || !serviceType || !material || !description) {
           return res.status(400).json({ error: "Missing required fields" });
         }
@@ -247,7 +254,8 @@ ${sep}${adminLink}`;
         notifyTelegramNewOrder(
           { ...order, delivery_city: deliveryCity, delivery_address: deliveryAddress, delivery_full_name: deliveryFullName || null, delivery_phone: deliveryPhone || null },
           fileUrls,
-          rawFilesToSend.length
+          rawFilesToSend.length,
+          estimatedPrice ? { price: Number(estimatedPrice), weight: estimatedWeight ? Number(estimatedWeight) : undefined, fill: estimatedFill ? Number(estimatedFill) : undefined, qty: estimatedQty ? Number(estimatedQty) : undefined } : undefined
         ).catch(console.error);
 
         // Send files to Telegram admin
