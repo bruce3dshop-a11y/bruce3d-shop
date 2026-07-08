@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import instructionImg from "@assets/EB79A94D-7992-4876-A4DE-0D6B8ED40700_1782231561624.png";
 import { motion, AnimatePresence } from "framer-motion";
 import ModelViewer from "@/components/ModelViewer";
@@ -186,7 +186,7 @@ function FileItem({ file, onRemove }: { file:File; onRemove:()=>void }) {
 export default function Order() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { t } = useI18n();
+  useI18n(); // locale kept for future i18n use
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
