@@ -231,38 +231,38 @@ export default function Dashboard() {
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-            className="flex items-center justify-between mb-8 p-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30 overflow-hidden">
-                {avatarUrl ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" /> : initials}
+            className="mb-3 p-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-violet-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30 overflow-hidden shrink-0">
+                  {avatarUrl ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" /> : initials}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-black font-display truncate">
+                    {t.dashboard.greeting} <span className="text-primary">{user?.name?.split(" ")[0]}!</span>
+                  </h1>
+                  <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-black font-display">
-                  {t.dashboard.greeting} <span className="text-primary">{user?.name?.split(" ")[0]}!</span>
-                </h1>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/profile">
-                <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" title="Профиль">
-                  <User className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <Link href="/profile">
+                  <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" title="Профиль">
+                    <User className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+                <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" title="Обновить" onClick={() => refetch()}>
+                  <RefreshCw className="w-3.5 h-3.5" />
                 </Button>
-              </Link>
-              <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" title="Обновить" onClick={() => refetch()}>
-                <RefreshCw className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-full h-8 px-3 gap-1.5 text-red-400/80 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all"
-                onClick={logout}
-                title="Выйти из аккаунта"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="text-xs font-semibold hidden sm:inline">Выйти</span>
-              </Button>
+              </div>
             </div>
+            {/* Кнопка выхода — отдельная строка, всегда видна */}
+            <button
+              onClick={logout}
+              className="mt-4 w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-red-500/30 bg-red-500/[0.06] text-red-400 hover:bg-red-500/15 hover:border-red-500/50 transition-all text-sm font-semibold"
+            >
+              <LogOut className="w-4 h-4" />
+              Выйти из аккаунта
+            </button>
           </motion.div>
 
           {/* Stats */}
