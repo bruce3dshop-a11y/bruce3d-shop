@@ -10,7 +10,7 @@ export function isStorageConfigured(): boolean {
 
 function sign(params: Record<string, string>, secret: string): string {
   const str = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join("&");
-  return crypto.createHash("sha256").update(str + secret).digest("hex");
+  return crypto.createHash("sha1").update(str + secret).digest("hex");
 }
 
 export function createUploadSignature(folder: string, timestamp: string) {
