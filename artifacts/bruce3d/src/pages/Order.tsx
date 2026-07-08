@@ -225,8 +225,10 @@ export default function Order() {
   const servicesTotal = selectedServices.reduce((sum, s) => sum + (SERVICE_MIN_PRICES[s] ?? 0), 0);
 
   // Итоговая комбинированная оценка (услуги + материал)
-  const hasServices = servicesTotal > 0;
-  const hasMaterial = materialEstimate !== null;
+  // hasServices — факт выбора услуги, даже если цена 0 (ремонт — по согласованию)
+  const hasServices = selectedServices.length > 0;
+  // hasMaterial — только если материал явно выбран И введён вес
+  const hasMaterial = !!primaryMaterial && materialEstimate !== null;
   const combinedMin  = servicesTotal + (materialEstimate?.min  ?? 0);
   const combinedMax  = servicesTotal + (materialEstimate?.max  ?? 0);
   const combinedBase = servicesTotal + (materialEstimate?.base ?? 0);
