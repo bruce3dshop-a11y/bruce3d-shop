@@ -33,6 +33,91 @@ import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
+/* ── Per-page meta ─────────────────────────────────────────────────────── */
+const ROUTE_META: Record<string, { title: string; description: string }> = {
+  "/": {
+    title: "BRUCE 3D SHOP — 3D-печать в Москве",
+    description: "Профессиональная 3D-печать: PLA, PETG, ABS, TPU, смола. Онлайн-заказ, доставка по России.",
+  },
+  "/services": {
+    title: "Услуги — BRUCE 3D SHOP",
+    description: "3D-печать, постобработка, покраска, прототипирование. Killer Bunny™.",
+  },
+  "/materials": {
+    title: "Материалы — BRUCE 3D SHOP",
+    description: "PLA, PETG, ABS, TPU, Resin — характеристики и применение каждого материала.",
+  },
+  "/prices": {
+    title: "Цены — BRUCE 3D SHOP",
+    description: "Актуальные цены на 3D-печать. Прозрачный расчёт стоимости.",
+  },
+  "/reviews": {
+    title: "Отзывы — BRUCE 3D SHOP",
+    description: "Отзывы клиентов BRUCE 3D SHOP о качестве 3D-печати и сервисе.",
+  },
+  "/calculator": {
+    title: "Калькулятор — BRUCE 3D SHOP",
+    description: "Онлайн-калькулятор стоимости 3D-печати. Рассчитайте цену за секунды.",
+  },
+  "/gallery": {
+    title: "Галерея работ — BRUCE 3D SHOP",
+    description: "Примеры наших 3D-работ: фигурки, детали, прототипы, арт.",
+  },
+  "/shop": {
+    title: "Магазин — BRUCE 3D SHOP",
+    description: "Готовые изделия и 3D-модели BRUCE 3D SHOP. Купить онлайн.",
+  },
+  "/tracker": {
+    title: "Трекинг заказа — BRUCE 3D SHOP",
+    description: "Отследите статус вашего заказа по номеру.",
+  },
+  "/order": {
+    title: "Заказать печать — BRUCE 3D SHOP",
+    description: "Оформите заказ на 3D-печать онлайн. Быстро, удобно, надёжно.",
+  },
+  "/dashboard": {
+    title: "Мои заказы — BRUCE 3D SHOP",
+    description: "История и статус ваших заказов в BRUCE 3D SHOP.",
+  },
+  "/profile": {
+    title: "Профиль — BRUCE 3D SHOP",
+    description: "Редактируйте профиль, аватар и сохранённый адрес доставки.",
+  },
+  "/privacy": {
+    title: "Политика конфиденциальности — BRUCE 3D SHOP",
+    description: "Политика обработки персональных данных BRUCE 3D SHOP.",
+  },
+  "/login": {
+    title: "Войти — BRUCE 3D SHOP",
+    description: "Войдите в аккаунт BRUCE 3D SHOP.",
+  },
+  "/register": {
+    title: "Регистрация — BRUCE 3D SHOP",
+    description: "Создайте аккаунт BRUCE 3D SHOP.",
+  },
+};
+
+function updateMeta(path: string) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const route = path.startsWith(base) ? path.slice(base.length) || "/" : path;
+  // match longest prefix
+  const matched =
+    Object.keys(ROUTE_META)
+      .filter((k) => route === k || (k !== "/" && route.startsWith(k + "/")))
+      .sort((a, b) => b.length - a.length)[0] ?? "/";
+  const m = ROUTE_META[matched] ?? ROUTE_META["/"];
+  document.title = m.title;
+  const setMeta = (sel: string, val: string) => {
+    const el = document.querySelector<HTMLMetaElement>(sel);
+    if (el) el.setAttribute("content", val);
+  };
+  setMeta('meta[name="description"]', m.description);
+  setMeta('meta[property="og:title"]', m.title);
+  setMeta('meta[property="og:description"]', m.description);
+  setMeta('meta[name="twitter:title"]', m.title);
+  setMeta('meta[name="twitter:description"]', m.description);
+}
+
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
   constructor(props: any) {
     super(props);
@@ -62,7 +147,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 
 function ScrollToTop() {
   const [location] = useLocation();
-  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [location]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    updateMeta(location);
+  }, [location]);
   return null;
 }
 
@@ -135,7 +223,6 @@ function Preloader({ onDone }: { onDone: () => void }) {
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
       style={{ background: "#020009" }}
     >
-      {/* Orbs */}
       <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-700/20 rounded-full blur-[80px] animate-pulse" />
       <div className="absolute bottom-1/3 right-1/4 w-48 h-48 bg-violet-600/15 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: "0.8s" }} />
 
@@ -145,7 +232,6 @@ function Preloader({ onDone }: { onDone: () => void }) {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative flex flex-col items-center gap-6"
       >
-        {/* Logo */}
         <motion.img
           src="/logo-wide.png"
           alt="BRUCE 3D SHOP"
@@ -153,7 +239,6 @@ function Preloader({ onDone }: { onDone: () => void }) {
           animate={{ y: [0, -8, 0] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
         />
-        {/* Name */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -166,7 +251,6 @@ function Preloader({ onDone }: { onDone: () => void }) {
           </div>
           <div className="text-xs font-bold tracking-[0.4em] text-purple-400/70 uppercase">KILLER BUNNY™</div>
         </motion.div>
-        {/* Loading bar */}
         <div className="w-48 h-0.5 bg-white/10 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
@@ -195,6 +279,7 @@ function App() {
 
   useEffect(() => {
     sessionStorage.setItem("visited", "1");
+    updateMeta(window.location.pathname);
     if (!isFirstVisit) setLoading(false);
   }, [isFirstVisit]);
 
