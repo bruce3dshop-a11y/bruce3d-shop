@@ -365,9 +365,11 @@ export default function Order() {
   }
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-28 bg-[#020009]">
       {/* Hero */}
       <div className="relative overflow-hidden pt-16 pb-14 px-4 text-center">
+        {/* Плотный тёмный фон, перекрывающий глобальный фон-анимацию */}
+        <div className="absolute inset-0 bg-[#020009]" />
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[320px] bg-primary/[0.07] blur-[100px] rounded-full" />
           <div className="absolute top-8 left-1/4 w-[200px] h-[200px] bg-violet-600/[0.05] blur-[60px] rounded-full" />

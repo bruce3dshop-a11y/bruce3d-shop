@@ -249,11 +249,18 @@ export default function Dashboard() {
                   <User className="w-3.5 h-3.5" />
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" onClick={() => refetch()}>
+              <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0" title="Обновить" onClick={() => refetch()}>
                 <RefreshCw className="w-3.5 h-3.5" />
               </Button>
-              <Button variant="outline" size="sm" className="rounded-full border-border/50" onClick={logout}>
-                <LogOut className="w-3.5 h-3.5 mr-1.5" /> {t.dashboard.logout}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full h-8 px-3 gap-1.5 text-red-400/80 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all"
+                onClick={logout}
+                title="Выйти из аккаунта"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="text-xs font-semibold hidden sm:inline">Выйти</span>
               </Button>
             </div>
           </motion.div>

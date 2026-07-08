@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { User, Camera, Save, ArrowLeft, MapPin, Phone, Mail, MessageCircle, Lock } from "lucide-react";
+import { User, Camera, Save, ArrowLeft, MapPin, Phone, Mail, MessageCircle, Lock, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -103,19 +103,33 @@ export default function Profile() {
             <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-primary via-violet-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-primary/30">
               {avatar ? <img src={avatar} alt="avatar" className="w-full h-full object-cover" /> : initials}
             </div>
+            {/* Кнопка загрузки фото */}
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
               className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-primary flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors"
+              title="Изменить фото"
             >
               {uploading ? <div className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin" /> : <Camera className="w-3.5 h-3.5 text-white" />}
             </button>
+            {/* Кнопка удаления аватара — появляется только если аватар установлен */}
+            {avatar && (
+              <button
+                onClick={() => { setAvatar(""); toast({ title: "Аватар удалён", description: "Нажмите «Сохранить» для применения" }); }}
+                className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                title="Удалить фото"
+              >
+                <Trash2 className="w-3 h-3 text-white" />
+              </button>
+            )}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
           <div>
             <div className="font-black text-lg">{user?.name}</div>
             <div className="text-sm text-white/40">{user?.email}</div>
-            <div className="text-xs text-white/25 mt-1">Нажмите на камеру чтобы изменить фото</div>
+            <div className="text-xs text-white/25 mt-1">
+              {avatar ? "Нажмите 🗑 чтобы удалить · 📷 чтобы изменить фото" : "Нажмите на камеру чтобы добавить фото"}
+            </div>
           </div>
         </motion.div>
 
