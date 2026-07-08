@@ -19,6 +19,7 @@ interface Order {
   id: number; order_number: string; service_type: string; material: string;
   status: string; price?: number; payment_link?: string;
   created_at: string; description: string; delivery_type: string;
+  estimated_price?: string | null;
 }
 
 const STATUS = {
@@ -143,6 +144,9 @@ function OrderCard({ order }: { order: Order }) {
             )}
             {needsConfirm && order.price && (
               <span className="text-xs text-emerald-400 font-bold text-right">К оплате: {order.price} ₽</span>
+            )}
+            {!needsConfirm && order.estimated_price && !isDone && (
+              <span className="text-xs text-amber-400/70 font-medium text-right">≈ {Number(order.estimated_price).toLocaleString("ru")} ₽</span>
             )}
             <Link href={`/order/${order.id}`}>
               <Button variant="outline" size="sm" className="rounded-full h-8 text-xs border-border/50 hover:border-primary/50">

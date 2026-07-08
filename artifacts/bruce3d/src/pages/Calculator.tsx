@@ -1,38 +1,25 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Calculator as CalcIcon, ArrowRight, Info, Zap } from "lucide-react";
+import { Calculator as CalcIcon, ArrowRight, Info, Zap, Clock } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-
-const materials = [
-  { id: "pla", name: "PLA", pricePerGram: 3.5, density: 1.24, color: "bg-green-500", accent: "#10b981" },
-  { id: "petg", name: "PETG", pricePerGram: 4.0, density: 1.27, color: "bg-blue-500", accent: "#3b82f6" },
-  { id: "abs", name: "ABS", pricePerGram: 4.5, density: 1.05, color: "bg-yellow-500", accent: "#f59e0b" },
-  { id: "tpu", name: "TPU", pricePerGram: 5.0, density: 1.21, color: "bg-orange-500", accent: "#f97316" },
-  { id: "resin", name: "Фотополимер", pricePerGram: 8.0, density: 1.10, color: "bg-purple-500", accent: "#a855f7" },
-];
-
-const qualities = [
-  { id: "draft", name: "Черновое", multiplier: 1.0, layerHeight: "0.3 мм", desc: "Быстро, видны слои" },
-  { id: "standard", name: "Стандарт", multiplier: 1.3, layerHeight: "0.2 мм", desc: "Баланс качества" },
-  { id: "fine", name: "Детальное", multiplier: 1.7, layerHeight: "0.1 мм", desc: "Высокая точность" },
-];
+import { CALC_MATERIALS, CALC_QUALITIES, CALC_INFILLS, calcEstimate } from "@/lib/calc";
 
 export default function Calculator() {
-  const [material, setMaterial] = useState(materials[0]);
-  const [quality, setQuality] = useState(qualities[1]);
-  const [weight, setWeight] = useState([50]);
-  const [infill, setInfill] = useState([20]);
-  const [copies, setCopies] = useState([1]);
+  const [materialId, setMaterialId] = useState(CALC_MATERIALS[0].id);
+  const [qualityId, setQualityId]   = useState(CALC_QUALITIES[1].id);
+  const [weight, setWeight]         = useState([50]);
+  const [infill, setInfill]         = useState([20]);
+  const [copies, setCopies]         = useState([1]);
 
-  const materialCost = weight[0] * material.pricePerGram;
-  const qualityCost = materialCost * quality.multiplier;
-  const baseCost = Math.max(300, qualityCost * (0.5 + infill[0] / 100 * 0.5));
-  const totalCost = Math.round(baseCost * copies[0]);
-  const minCost = Math.round(totalCost * 0.9);
-  const maxCost = Math.round(totalCost * 1.2);
-
-  const printTime = Math.round((weight[0] / material.density / 10) * quality.multiplier * (1 + infill[0] / 100));
+  const material = CALC_MATERIALS.find(m => m.id === materialId)!;
+  const result   = calcEstimate({
+    weightG:    weight[0],
+    materialId,
+    infillPct:  infill[0],
+    qty:        copies[0],
+    qualityId,
+  });
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
@@ -56,151 +43,169 @@ export default function Calculator() {
             Рассчитайте стоимость
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-            Предварительный расчёт стоимости 3D-печати. Точная цена — после анализа вашего файла.
+            className="text-white/50 text-base md:text-lg max-w-xl mx-auto">
+            Введите параметры и получите ориентировочную цену мгновенно
           </motion.p>
         </div>
       </section>
 
-      {/* Section divider */}
-      <div className="h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+      <div className="h-px section-sep" />
 
+      {/* CALCULATOR */}
       <section className="relative z-10 py-16 md:py-20">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+            {/* LEFT: Controls */}
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+              className="space-y-6 p-8 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
 
               {/* Material */}
-              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                className="rounded-2xl glass-card p-6 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <h3 className="font-display font-bold text-base mb-4">Материал</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {materials.map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setMaterial(m)}
-                      className={`p-3 rounded-xl border text-sm font-medium transition-all duration-200 ${
-                        material.id === m.id
-                          ? "border-primary bg-primary/12 text-primary shadow-[0_0_15px_rgba(147,51,234,0.2)]"
-                          : "border-white/8 hover:border-primary/25 hover:bg-white/3 text-muted-foreground hover:text-white"
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Материал</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {CALC_MATERIALS.filter(m => m.id !== "other").map(m => (
+                    <button key={m.id} onClick={() => setMaterialId(m.id)}
+                      className={`flex flex-col items-center p-3 rounded-2xl border text-center transition-all duration-200 ${
+                        materialId === m.id
+                          ? "border-[color:var(--ac)] bg-[color:var(--ac)]/10 shadow-[0_0_16px_var(--ac)/30]"
+                          : "border-white/[0.07] bg-white/[0.02] hover:border-white/15"
                       }`}
-                    >
-                      <div className={`w-2.5 h-2.5 rounded-full ${m.color} mx-auto mb-1.5`} />
-                      <div>{m.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">{m.pricePerGram} ₽/г</div>
+                      style={{ "--ac": m.accent } as React.CSSProperties}>
+                      <div className="w-2.5 h-2.5 rounded-full mb-1.5 mt-0.5" style={{ background: m.accent, boxShadow: `0 0 8px ${m.accent}80` }} />
+                      <span className={`text-sm font-bold ${materialId === m.id ? "text-white" : "text-white/60"}`}>{m.name}</span>
+                      <span className="text-[10px] text-white/30 mt-0.5">от {m.minPrice} ₽</span>
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </div>
 
               {/* Quality */}
-              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.05 }}
-                className="rounded-2xl glass-card p-6 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <h3 className="font-display font-bold text-base mb-4">Качество печати</h3>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">Качество печати</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {qualities.map(q => (
-                    <button
-                      key={q.id}
-                      onClick={() => setQuality(q)}
-                      className={`p-4 rounded-xl border text-sm text-center transition-all duration-200 ${
-                        quality.id === q.id
-                          ? "border-primary bg-primary/12 text-primary shadow-[0_0_15px_rgba(147,51,234,0.2)]"
-                          : "border-white/8 hover:border-primary/25 hover:bg-white/3 text-muted-foreground hover:text-white"
-                      }`}
-                    >
-                      <div className="font-semibold mb-1">{q.name}</div>
-                      <div className="text-xs text-muted-foreground">{q.layerHeight}</div>
-                      <div className="text-xs text-muted-foreground/70 mt-1">{q.desc}</div>
+                  {CALC_QUALITIES.map(q => (
+                    <button key={q.id} onClick={() => setQualityId(q.id)}
+                      className={`flex flex-col p-3 rounded-2xl border text-left transition-all duration-200 ${
+                        qualityId === q.id
+                          ? "border-primary/60 bg-primary/10 shadow-[0_0_16px_rgba(147,51,234,0.2)]"
+                          : "border-white/[0.07] bg-white/[0.02] hover:border-white/15"
+                      }`}>
+                      <span className={`text-sm font-bold mb-0.5 ${qualityId === q.id ? "text-white" : "text-white/60"}`}>{q.name}</span>
+                      <span className="text-[10px] text-white/35">{q.layerHeight}</span>
+                      <span className="text-[10px] text-white/25 leading-tight">{q.desc}</span>
                     </button>
                   ))}
                 </div>
-              </motion.div>
+              </div>
 
-              {/* Sliders */}
-              <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}
-                className="rounded-2xl glass-card p-6 space-y-6 relative overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-                <h3 className="font-display font-bold text-base">Параметры</h3>
-                <div>
-                  <div className="flex justify-between mb-3">
-                    <span className="text-sm font-medium">Вес изделия</span>
-                    <span className="text-sm font-bold text-primary">{weight[0]} г</span>
-                  </div>
-                  <Slider value={weight} onValueChange={setWeight} min={5} max={500} step={5} className="w-full" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1.5"><span>5 г</span><span>500 г</span></div>
+              {/* Weight */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Вес детали</h3>
+                  <span className="text-sm font-bold text-white">{weight[0]} г</span>
                 </div>
-                <div>
-                  <div className="flex justify-between mb-3">
-                    <span className="text-sm font-medium flex items-center gap-1.5">
-                      Заполнение <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                    </span>
-                    <span className="text-sm font-bold text-primary">{infill[0]}%</span>
-                  </div>
-                  <Slider value={infill} onValueChange={setInfill} min={10} max={100} step={5} className="w-full" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1.5"><span>10% (лёгкое)</span><span>100% (монолит)</span></div>
+                <Slider value={weight} onValueChange={setWeight} min={5} max={2000} step={5}
+                  className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary/80 [&_.relative]:bg-white/10 [&_.absolute]:bg-primary" />
+                <div className="flex justify-between text-[10px] text-white/20 mt-1.5"><span>5 г</span><span>2 кг</span></div>
+              </div>
+
+              {/* Infill */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Заполнение</h3>
+                  <span className="text-sm font-bold text-white">{infill[0]}%</span>
                 </div>
-                <div>
-                  <div className="flex justify-between mb-3">
-                    <span className="text-sm font-medium">Количество копий</span>
-                    <span className="text-sm font-bold text-primary">{copies[0]} шт.</span>
-                  </div>
-                  <Slider value={copies} onValueChange={setCopies} min={1} max={50} step={1} className="w-full" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1.5"><span>1 шт.</span><span>50 шт.</span></div>
+                <div className="flex gap-2 flex-wrap">
+                  {CALC_INFILLS.map(v => (
+                    <button key={v} onClick={() => setInfill([v])}
+                      className={`flex-1 min-w-[44px] h-9 rounded-xl text-xs font-bold border transition-all ${
+                        infill[0] === v
+                          ? "bg-primary/20 border-primary/60 text-white shadow-[0_0_10px_rgba(147,51,234,0.2)]"
+                          : "bg-white/[0.03] border-white/[0.07] text-white/40 hover:border-white/20 hover:text-white/70"
+                      }`}>
+                      {v}%
+                    </button>
+                  ))}
                 </div>
-              </motion.div>
-            </div>
+                <div className="flex justify-between text-[10px] text-white/20 mt-2">
+                  <span>Декор/Прototip</span><span>Монолит</span>
+                </div>
+              </div>
 
-            {/* Result panel */}
-            <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}
-              className="lg:col-span-1">
-              <div className="sticky top-24">
-                <div className="rounded-2xl glass-card p-6 space-y-4 relative overflow-hidden">
-                  <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-20 bg-purple-700/20 blur-2xl pointer-events-none" />
+              {/* Copies */}
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Количество</h3>
+                  <span className="text-sm font-bold text-white">{copies[0]} шт.</span>
+                </div>
+                <Slider value={copies} onValueChange={setCopies} min={1} max={100} step={1}
+                  className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary/80 [&_.relative]:bg-white/10 [&_.absolute]:bg-primary" />
+                <div className="flex justify-between text-[10px] text-white/20 mt-1.5"><span>1</span><span>100</span></div>
+              </div>
+            </motion.div>
 
-                  <h3 className="font-display text-lg font-bold flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-primary" /> Результат
-                  </h3>
+            {/* RIGHT: Result */}
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+              className="flex flex-col gap-5">
 
-                  <div className="text-center py-5 rounded-xl bg-primary/5 border border-primary/12">
+              {/* Price card */}
+              <div className="relative p-8 rounded-3xl border border-primary/20 bg-primary/[0.04] backdrop-blur-sm overflow-hidden">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-20 bg-purple-700/20 blur-2xl pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+
+                <h3 className="font-display text-lg font-bold flex items-center gap-2 mb-6 relative">
+                  <Zap className="w-4 h-4 text-primary" /> Результат
+                </h3>
+
+                {result ? (
+                  <div className="text-center py-6 rounded-2xl bg-primary/8 border border-primary/15 relative mb-5">
                     <div className="text-xs text-muted-foreground mb-1">Примерная стоимость</div>
-                    <div className="text-4xl font-black text-primary leading-none">{minCost}–{maxCost}</div>
+                    <div className="text-4xl font-black text-primary leading-none">
+                      {result.min.toLocaleString("ru")}–{result.max.toLocaleString("ru")}
+                    </div>
                     <div className="text-lg font-bold text-primary mt-1">₽</div>
                     <div className="text-xs text-muted-foreground mt-1">за {copies[0]} шт.</div>
                   </div>
+                ) : (
+                  <div className="text-center py-6 rounded-2xl bg-white/[0.02] border border-white/[0.07] mb-5">
+                    <div className="text-4xl font-black text-white/15 leading-none">—</div>
+                    <div className="text-xs text-white/25 mt-2">Задайте параметры выше</div>
+                  </div>
+                )}
 
-                  <div className="space-y-2.5 text-sm border-t border-white/6 pt-4">
-                    {[
-                      { label: "Материал", value: material.name },
-                      { label: "Качество", value: quality.name },
-                      { label: "Вес", value: `${weight[0]} г × ${copies[0]}` },
-                      { label: "Заполнение", value: `${infill[0]}%` },
-                    ].map(row => (
-                      <div key={row.label} className="flex justify-between">
-                        <span className="text-muted-foreground">{row.label}</span>
-                        <span className="font-medium">{row.value}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between border-t border-white/6 pt-2">
-                      <span className="text-muted-foreground">Примерное время</span>
-                      <span className="font-medium">{printTime} ч</span>
+                <div className="space-y-2.5 text-sm border-t border-white/6 pt-4">
+                  {[
+                    { label: "Материал",     value: material.name },
+                    { label: "Качество",     value: CALC_QUALITIES.find(q => q.id === qualityId)?.name || "—" },
+                    { label: "Вес",          value: `${weight[0]} г × ${copies[0]} шт.` },
+                    { label: "Заполнение",   value: `${infill[0]}%` },
+                  ].map(row => (
+                    <div key={row.label} className="flex justify-between">
+                      <span className="text-muted-foreground">{row.label}</span>
+                      <span className="font-medium">{row.value}</span>
                     </div>
-                  </div>
-
-                  <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-400/80 leading-relaxed">
-                    Это приблизительный расчёт. Точная стоимость определяется после анализа STL-файла.
-                  </div>
-
-                  <Link
-                    href="/order"
-                    className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm shadow-[0_0_20px_rgba(147,51,234,0.35)] hover:bg-primary/90 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(147,51,234,0.5)]"
-                  >
-                    Оформить заказ <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  ))}
+                  {result && (
+                    <div className="flex justify-between border-t border-white/6 pt-2">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Примерное время</span>
+                      <span className="font-medium">~{result.printTimeH} ч</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              <div className="p-4 rounded-2xl bg-yellow-500/8 border border-yellow-500/20 text-xs text-yellow-400/80 leading-relaxed flex gap-2">
+                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                Это приблизительный расчёт. Точная стоимость определяется после анализа вашего STL-файла администратором.
+              </div>
+
+              <Link
+                href="/order"
+                className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-primary text-white font-bold text-sm shadow-[0_0_20px_rgba(147,51,234,0.35)] hover:bg-primary/90 transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(147,51,234,0.5)]"
+              >
+                Оформить заказ <ArrowRight className="w-4 h-4" />
+              </Link>
             </motion.div>
           </div>
         </div>

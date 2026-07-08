@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
+import { calcEstimate as sharedCalc } from "@/lib/calc";
 
 /* ─── Confetti ─────────────────────────────────────────────────────────── */
 function ConfettiEffect({ active }: { active: boolean }) {
@@ -65,17 +66,6 @@ function ConfettiEffect({ active }: { active: boolean }) {
     return () => { cancelAnimationFrame(raf); canvas.remove(); };
   }, [active]);
   return null;
-}
-
-/* ─── Price estimator logic ─────────────────────────────────────────────── */
-const MATERIAL_RATE: Record<string, number> = { pla: 3, petg: 3, abs: 4, tpu: 3.5, resin: 7, other: 3.5 };
-const FILL_FACTOR: Record<number, number> = { 15: 0.4, 20: 0.5, 40: 0.65, 60: 0.8, 80: 0.9, 100: 1.0 };
-
-function calcEstimate(weightG: number, material: string, fillPct: number, qty: number): number | null {
-  if (!weightG || !material || !fillPct || !qty) return null;
-  const rate = MATERIAL_RATE[material] ?? 3.5;
-  const fill = FILL_FACTOR[fillPct] ?? 0.65;
-  return Math.max(300, Math.ceil(weightG * rate * fill * qty));
 }
 
 /* ─── Zod schema ────────────────────────────────────────────────────────── */
@@ -214,7 +204,7 @@ export default function Order() {
   const [estQty, setEstQty] = useState<number>(1);
 
   const primaryMaterial = selectedMaterials[0] || "";
-  const estimatedPrice = calcEstimate(estWeight, primaryMaterial, estFill, estQty);
+  const estimatedPrice = sharedCalc({ weightG: estWeight, materialId: primaryMaterial, infillPct: estFill, qty: estQty });
 
   // Auto-fill from saved user profile
   const savedAddress = (user as any)?.saved_address;
@@ -275,17 +265,17 @@ export default function Order() {
       fd.append("serviceType", selectedServices.join(", "));
       fd.append("material", selectedMaterials.join(", "));
       // Estimated price
-      if (estimatedPrice) {
+      if (estimatedPrice?.base) {
         fd.append("estimatedWeight", String(estWeight));
         fd.append("estimatedFill", String(estFill));
         fd.append("estimatedQty", String(estQty));
-        fd.append("estimatedPrice", String(estimatedPrice));
+        fd.append("estimatedPrice", String(estimatedPrice.base));
       }
       if (uploadedFileUrls.length > 0) fd.append("fileUrls", JSON.stringify(uploadedFileUrls));
       const res = await fetch(`${import.meta.env.BASE_URL}api/order`, { method:"POST", body:fd, credentials:"include" });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
-      setSuccess({ orderNumber: data.orderNumber, orderId: data.orderId, estimatedPrice: estimatedPrice ?? undefined });
+      setSuccess({ orderNumber: data.orderNumber, orderId: data.orderId, estimatedPrice: estimatedPrice?.base });
       form.reset(); setSelectedFiles([]); setSelectedServices([]); setSelectedMaterials([]);
     } catch (err: any) {
       const msg = err?.message && !err.message.includes("Server error") ? err.message : "Не удалось отправить заказ. Попробуйте ещё раз.";
@@ -510,10 +500,11 @@ export default function Order() {
                       className="flex items-center justify-between p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25">
                       <div>
                         <div className="text-xs text-amber-400/60 mb-0.5">Ориентировочная цена</div>
-                        <div className="text-3xl font-black text-amber-400">≈ {estimatedPrice.toLocaleString("ru")} ₽</div>
+                        <div className="text-3xl font-black text-amber-400">
+                          {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽
+                        </div>
                         <div className="text-xs text-white/25 mt-1">
-                          {primaryMaterial.toUpperCase()} · {estFill}% заполнение · {estQty} шт
-                          {estWeight ? ` · ${estWeight} г` : ""}
+                          {primaryMaterial.toUpperCase()} · {estFill}% · {estQty} шт · {estWeight} г
                         </div>
                       </div>
                       <Calculator className="w-10 h-10 text-amber-400/30" />
@@ -678,7 +669,7 @@ export default function Order() {
               </Button>
               {estimatedPrice && (
                 <div className="text-center mt-3 text-sm text-amber-400/70 font-semibold">
-                  Примерная стоимость: ≈ {estimatedPrice.toLocaleString("ru")} ₽ · будет отправлена вместе с заявкой
+                  Примерная стоимость: ≈ {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽ · будет отправлена вместе с заявкой
                 </div>
               )}
               <p className="text-center text-xs text-white/25 mt-2">

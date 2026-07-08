@@ -48,15 +48,56 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+interface Ripple { id: number; x: number; y: number; size: number }
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+  ({ className, variant, size, asChild = false, onClick, children, ...props }, ref) => {
+    const [ripples, setRipples] = React.useState<Ripple[]>([])
+
+    const handleClick = React.useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        const btn = e.currentTarget
+        const rect = btn.getBoundingClientRect()
+        const size = Math.max(rect.width, rect.height) * 2
+        const x = e.clientX - rect.left - size / 2
+        const y = e.clientY - rect.top - size / 2
+        const id = Date.now() + Math.random()
+        setRipples(prev => [...prev, { id, x, y, size }])
+        setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 620)
+        onClick?.(e)
+      },
+      [onClick]
+    )
+
+    if (asChild) {
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
+        >
+          {children}
+        </Slot>
+      )
+    }
+
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+      <button
+        className={cn(buttonVariants({ variant, size, className }), "relative overflow-hidden")}
         ref={ref}
+        onClick={handleClick}
         {...props}
-      />
+      >
+        {children}
+        {ripples.map(({ id, x, y, size }) => (
+          <span
+            key={id}
+            aria-hidden
+            className="ripple-wave"
+            style={{ left: x, top: y, width: size, height: size }}
+          />
+        ))}
+      </button>
     )
   }
 )

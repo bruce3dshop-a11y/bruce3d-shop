@@ -17,7 +17,7 @@ const staticReviews: Review[] = [
   { id: -1, name: "Иван П.", role: "Инженер-конструктор", rating: 5, text: "Отличное качество печати сложных деталей. Все размеры точно соответствуют модели. Будем сотрудничать!", created_at: "" },
   { id: -2, name: "Алексей К.", role: "Коллекционер", rating: 5, text: "Фигурка получилась просто потрясающая! Проработка деталей на высоте. Спасибо за качественную работу!", created_at: "" },
   { id: -3, name: "Мария С.", role: "Архитектор", rating: 5, text: "Заказываю архитектурные макеты не в первый раз. Всегда всё аккуратно, быстро и с учётом всех пожеланий.", created_at: "" },
-  { id: -4, name: "Дмитрий В.", role: "Разработчик устройств", rating: 5, text: "Печатал функциональные детали для прототипа. Всё собралось идеально. Отличное качество и быстрая доставка!", created_at: "" },
+  { id: -4, name: "Дмитрий В.", role: "Разработчик устройств", rating: 5, text: "Печатал функциональные детали для prototipa. Всё собралось идеально. Отличное качество и быстрая доставка!", created_at: "" },
   { id: -5, name: "Ольга М.", role: "Дизайнер", rating: 5, text: "Нужна была деталь сложной формы. Сделали даже лучше, чем я ожидала. Спасибо за профессионализм!", created_at: "" },
   { id: -6, name: "Сергей Л.", role: "Автолюбитель", rating: 5, text: "Напечатали редкую деталь для моего авто. Прочная, точная как оригинал. Очень выручили!", created_at: "" },
 ];
@@ -33,6 +33,28 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
           <Star className={`w-7 h-7 transition-colors ${i <= (hovered || value) ? "fill-primary text-primary drop-shadow-[0_0_6px_rgba(147,51,234,0.8)]" : "text-white/20"}`} />
         </button>
       ))}
+    </div>
+  );
+}
+
+function SkeletonReview() {
+  return (
+    <div className="flex flex-col gap-4 p-6 rounded-3xl bg-white/[0.03] border border-white/[0.08] animate-pulse">
+      <div className="flex gap-0.5">
+        {[...Array(5)].map((_,i) => <div key={i} className="w-3.5 h-3.5 rounded-full bg-white/10" />)}
+      </div>
+      <div className="space-y-2">
+        <div className="h-3 bg-white/8 rounded-full w-full" />
+        <div className="h-3 bg-white/8 rounded-full w-5/6" />
+        <div className="h-3 bg-white/8 rounded-full w-4/6" />
+      </div>
+      <div className="flex items-center gap-3 pt-1 border-t border-white/[0.06]">
+        <div className="w-9 h-9 rounded-full bg-white/8" />
+        <div className="space-y-1.5">
+          <div className="h-3 bg-white/10 rounded-full w-24" />
+          <div className="h-2.5 bg-white/6 rounded-full w-16" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -70,43 +92,42 @@ export default function Reviews() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: "", role: "", rating: 5, text: "" });
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["reviews"],
     queryFn: () => apiFetch<{ reviews: Review[] }>("reviews"),
   });
 
-  const dbReviews = data?.reviews || [];
-  const sortedDb = [...dbReviews].sort((a: any, b: any) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-  const allReviews = [...sortedDb, ...staticReviews];
+  const allReviews = [...(data?.reviews || []), ...staticReviews];
 
   const submitMutation = useMutation({
-    mutationFn: () => apiFetch<{ message: string }>("reviews", { method: "POST", body: JSON.stringify(formData) }),
-    onSuccess: (data) => {
-      toast({ title: "✅ " + (data.message || "Отзыв отправлен на модерацию!") });
+    mutationFn: (body: typeof formData) =>
+      apiFetch("reviews", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => {
+      toast({ title: "Отзыв отправлен!", description: "Появится после проверки администратором." });
       setFormData({ name: "", role: "", rating: 5, text: "" });
       setShowForm(false);
-      queryClient.invalidateQueries({ queryKey: ["reviews"] });
+      qc.invalidateQueries({ queryKey: ["reviews"] });
     },
-    onError: () => toast({ title: "Ошибка отправки", variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Ошибка", description: e.message, variant: "destructive" }),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!formData.name.trim() || !formData.text.trim()) {
       toast({ title: "Заполните имя и текст отзыва", variant: "destructive" });
       return;
     }
-    submitMutation.mutate();
-  };
+    submitMutation.mutate(formData);
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
 
       {/* Hero */}
       <section className="relative py-24 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-industrial-grid opacity-20 pointer-events-none" />
         <div className="absolute top-1/2 left-0 w-[500px] h-[500px] rounded-full bg-purple-800/15 blur-[130px] pointer-events-none -translate-y-1/2 orb-a" />
         <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-violet-600/10 blur-[110px] pointer-events-none -translate-y-1/2 orb-b" />
@@ -114,7 +135,7 @@ export default function Reviews() {
         <div className="container relative z-10 mx-auto px-4 md:px-8 text-center">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/35 bg-primary/[0.08] backdrop-blur-sm text-primary text-xs font-bold mb-6 uppercase tracking-wider">
-            <Star className="w-3.5 h-3.5 fill-primary" /> Отзывы клиентов
+            <Star className="w-3.5 h-3.5 fill-current" /> Отзывы клиентов
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
             className="text-5xl md:text-7xl font-black font-display uppercase mb-5 leading-none text-gradient-cosmic">
@@ -122,14 +143,12 @@ export default function Reviews() {
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
             className="text-white/45 text-base md:text-lg max-w-xl mx-auto leading-relaxed mb-8">
-            Более 500 довольных клиентов. Рейтинг 5.0 ★ на всех платформах.
+            Реальные отзывы наших клиентов о качестве печати и сервисе
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}
-            className="flex justify-center gap-3">
-            <button
-              onClick={() => setShowForm(v => !v)}
-              className="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-primary/10 border border-primary/25 text-primary text-sm font-semibold hover:bg-primary/18 hover:border-primary/45 transition-all">
-              {showForm ? <><X className="w-4 h-4" /> Отмена</> : <><Plus className="w-4 h-4" /> Оставить отзыв</>}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <button onClick={() => setShowForm(v => !v)}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/15 bg-white/[0.04] text-sm font-semibold text-white/60 hover:border-primary/35 hover:text-white/90 hover:bg-primary/[0.06] transition-all">
+              {showForm ? <><X className="w-4 h-4" /> Скрыть форму</> : <><Plus className="w-4 h-4" /> Оставить отзыв</>}
             </button>
           </motion.div>
         </div>
@@ -141,9 +160,8 @@ export default function Reviews() {
       <AnimatePresence>
         {showForm && (
           <motion.section
-            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden relative z-10"
-          >
+            key="form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden border-b border-white/[0.06]">
             <div className="container mx-auto px-4 md:px-8 max-w-xl py-10">
               <form onSubmit={handleSubmit} className="space-y-4 p-7 rounded-3xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
                 <h3 className="text-lg font-black text-white mb-5 flex items-center gap-2">
@@ -174,11 +192,21 @@ export default function Reviews() {
       {/* Reviews grid */}
       <section className="relative z-10 py-12 pb-20">
         <div className="container mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allReviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <SkeletonReview />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allReviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          )}
 
           {/* Photo */}
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mt-12">

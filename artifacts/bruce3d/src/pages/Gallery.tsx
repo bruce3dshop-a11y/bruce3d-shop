@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ZoomIn, Package, Layers, ChevronDown } from "lucide-react";
+import { X, ZoomIn, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
 interface GalleryItem { id: number; title: string; description?: string; imageUrl: string; category?: string; }
 
 const CATS = ["Все", "3D Печать", "Моделирование", "Сканирование", "Фигурки", "Детали"];
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-3xl overflow-hidden bg-white/[0.03] border border-white/[0.07] aspect-square animate-pulse">
+      <div className="w-full h-full bg-gradient-to-br from-white/5 to-transparent skeleton-shimmer" />
+    </div>
+  );
+}
 
 export default function Gallery() {
   const [active, setActive] = useState("Все");
@@ -40,7 +48,7 @@ export default function Gallery() {
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
             className="text-white/45 text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-            Примеры нашей работы — детали, фигурки, прототипы, архитектурные макеты.
+            Примеры нашей работы — детали, фигурки, прototipы, архитектурные макеты.
           </motion.p>
         </div>
       </section>
@@ -70,26 +78,30 @@ export default function Gallery() {
         <div className="container mx-auto px-4 md:px-8">
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="rounded-3xl bg-white/[0.03] border border-white/[0.06] aspect-square animate-pulse" />
+              {Array.from({ length: 12 }).map((_, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                  <SkeletonCard />
+                </motion.div>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-24">
-              <Layers className="w-12 h-12 text-white/15 mx-auto mb-4" />
-              <p className="text-white/30">Работы в этой категории появятся скоро</p>
-            </div>
+          ) : items.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="text-center py-20 text-white/25">
+              <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p className="text-lg font-semibold">Галерея пуста</p>
+              <p className="text-sm mt-1">Скоро здесь появятся наши работы</p>
+            </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <AnimatePresence>
-                {filtered.map((item, i) => (
+              <AnimatePresence mode="popLayout">
+                {filtered.map((item, idx) => (
                   <motion.div
                     key={item.id}
                     layout
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.88 }}
-                    transition={{ delay: i * 0.04 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: idx * 0.03 }}
                     onClick={() => setSelected(item)}
                     className="group relative rounded-3xl overflow-hidden cursor-pointer bg-white/[0.03] border border-white/[0.07] hover:border-primary/35 transition-all duration-300 hover:shadow-[0_0_40px_rgba(147,51,234,0.15)] hover:-translate-y-1 aspect-square"
                   >

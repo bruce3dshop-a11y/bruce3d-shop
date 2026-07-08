@@ -240,6 +240,7 @@ ${sep}${adminLink}`;
           delivery_index: deliveryIndex,
           delivery_full_name: deliveryFullName || null,
           delivery_phone: deliveryPhone || null,
+          estimated_price: estimatedPrice ? String(Math.round(Number(estimatedPrice))) : null,
           status: "new",
         }).returning();
 
