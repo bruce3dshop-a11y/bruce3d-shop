@@ -217,21 +217,28 @@ export default function Order() {
   const [estFill, setEstFill] = useState<number>(40);
   const [estQty, setEstQty] = useState<number>(1);
 
-  const primaryMaterial = selectedMaterials[0] || "";
-  const materialEstimate = sharedCalc({ weightG: estWeight, materialId: primaryMaterial, infillPct: estFill, qty: estQty });
-  const primaryMinPrice = CALC_MATERIALS.find(m => m.id === primaryMaterial)?.minPrice;
+  // Считаем стоимость для каждого выбранного материала отдельно
+  const materialEstimates = selectedMaterials.map(matId => ({
+    matId,
+    meta: CALC_MATERIALS.find(m => m.id === matId),
+    result: sharedCalc({ weightG: estWeight, materialId: matId, infillPct: estFill, qty: estQty }),
+  }));
+
+  const materialsTotalMin  = materialEstimates.reduce((s, e) => s + (e.result?.min  ?? 0), 0);
+  const materialsTotalMax  = materialEstimates.reduce((s, e) => s + (e.result?.max  ?? 0), 0);
+  const materialsTotalBase = materialEstimates.reduce((s, e) => s + (e.result?.base ?? 0), 0);
 
   // Сумма базовых цен всех выбранных услуг
   const servicesTotal = selectedServices.reduce((sum, s) => sum + (SERVICE_MIN_PRICES[s] ?? 0), 0);
 
-  // Итоговая комбинированная оценка (услуги + материал)
+  // Итоговая комбинированная оценка (услуги + материалы)
   // hasServices — факт выбора услуги, даже если цена 0 (ремонт — по согласованию)
   const hasServices = selectedServices.length > 0;
-  // hasMaterial — только если материал явно выбран И введён вес
-  const hasMaterial = !!primaryMaterial && materialEstimate !== null;
-  const combinedMin  = servicesTotal + (materialEstimate?.min  ?? 0);
-  const combinedMax  = servicesTotal + (materialEstimate?.max  ?? 0);
-  const combinedBase = servicesTotal + (materialEstimate?.base ?? 0);
+  // hasMaterial — только если хотя бы один материал выбран И введён вес
+  const hasMaterial = selectedMaterials.length > 0 && estWeight > 0;
+  const combinedMin  = servicesTotal + (hasMaterial ? materialsTotalMin  : 0);
+  const combinedMax  = servicesTotal + (hasMaterial ? materialsTotalMax  : 0);
+  const combinedBase = servicesTotal + (hasMaterial ? materialsTotalBase : 0);
   const showCombined = hasServices || hasMaterial;
 
   // Auto-fill from saved user profile
@@ -488,9 +495,13 @@ export default function Order() {
                   );
                 })}
               </div>
-              {primaryMinPrice && (
+              {selectedMaterials.length > 0 && (
                 <p className="text-xs text-amber-400/60 mt-3 flex items-center gap-1.5">
-                  ⓘ Минимальная стоимость заказа с этим материалом — {primaryMinPrice.toLocaleString("ru")} ₽, даже если деталь весит меньше
+                  ⓘ Минимальная цена за штуку:{" "}
+                  {selectedMaterials.map(id => {
+                    const mat = CALC_MATERIALS.find(m => m.id === id);
+                    return mat ? `${mat.name} — ${mat.minPrice.toLocaleString("ru")} ₽` : null;
+                  }).filter(Boolean).join(", ")}
                 </p>
               )}
             </StepCard>
@@ -554,11 +565,15 @@ export default function Order() {
                         </div>
                       )}
                       {hasMaterial && (
-                        <div className={`px-4 flex justify-between text-xs text-white/50 ${hasServices ? "mt-1.5" : "pt-3"}`}>
-                          <span>Материал ({primaryMaterial.toUpperCase()}, {estWeight} г × {estQty} шт)</span>
-                          <span className="font-semibold text-amber-400/70">
-                            от {materialEstimate!.min.toLocaleString("ru")} ₽
-                          </span>
+                        <div className={`px-4 space-y-1.5 ${hasServices ? "mt-1.5" : "pt-3"}`}>
+                          {materialEstimates.map(({ matId, meta, result }) => result && (
+                            <div key={matId} className="flex justify-between text-xs text-white/50">
+                              <span>{meta?.name ?? matId.toUpperCase()} ({estWeight} г × {estQty} шт)</span>
+                              <span className="font-semibold text-amber-400/70">
+                                от {result.min.toLocaleString("ru")} ₽
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
@@ -588,9 +603,9 @@ export default function Order() {
                     Точная стоимость определяется после анализа заказа · Доставка не включена
                   </p>
                 )}
-                {hasMaterial && primaryMinPrice && (
+                {hasMaterial && materialEstimates.some(e => e.meta?.minPrice) && (
                   <p className="text-xs text-amber-400/50 mt-1.5 text-center">
-                    ⓘ Минимальная цена за материал {primaryMaterial.toUpperCase()} — {primaryMinPrice.toLocaleString("ru")} ₽ за штуку
+                    ⓘ Учтены минимальные цены за штуку по каждому материалу
                   </p>
                 )}
               </div>
