@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
-import { calcEstimate as sharedCalc } from "@/lib/calc";
+import { calcEstimate as sharedCalc, CALC_MATERIALS } from "@/lib/calc";
 
 /* ─── Confetti ─────────────────────────────────────────────────────────── */
 function ConfettiEffect({ active }: { active: boolean }) {
@@ -100,13 +100,13 @@ function getFileIcon(ext: string): string {
 }
 
 const SERVICE_CARDS = [
-  { value:"3d-print",    icon:Printer,  label:"3D Печать",        desc:"FDM и смола",         border:"border-violet-500/30", activeBg:"bg-violet-500/15 border-violet-400/70", activeText:"text-violet-300", icon_bg:"bg-violet-500/15 text-violet-400" },
-  { value:"3d-modeling", icon:PenTool,  label:"3D Моделирование", desc:"Любая сложность",     border:"border-blue-500/25",   activeBg:"bg-blue-500/15 border-blue-400/70",   activeText:"text-blue-300",   icon_bg:"bg-blue-500/15 text-blue-400" },
-  { value:"3d-scanning", icon:ScanLine, label:"3D Сканирование",  desc:"Обратный инжиниринг", border:"border-cyan-500/25",   activeBg:"bg-cyan-500/15 border-cyan-400/70",   activeText:"text-cyan-300",   icon_bg:"bg-cyan-500/15 text-cyan-400" },
-  { value:"repair",      icon:Wrench,   label:"Ремонт техники",   desc:"Запчасти и корпуса",  border:"border-orange-500/25", activeBg:"bg-orange-500/15 border-orange-400/70", activeText:"text-orange-300", icon_bg:"bg-orange-500/15 text-orange-400" },
+  { value:"3d-print",    icon:Printer,  label:"3D Печать",        desc:"FDM и смола",         price:"от 300 ₽",       border:"border-violet-500/30", activeBg:"bg-violet-500/15 border-violet-400/70", activeText:"text-violet-300", icon_bg:"bg-violet-500/15 text-violet-400" },
+  { value:"3d-modeling", icon:PenTool,  label:"3D Моделирование", desc:"Любая сложность",     price:"от 500 ₽",       border:"border-blue-500/25",   activeBg:"bg-blue-500/15 border-blue-400/70",   activeText:"text-blue-300",   icon_bg:"bg-blue-500/15 text-blue-400" },
+  { value:"3d-scanning", icon:ScanLine, label:"3D Сканирование",  desc:"Обратный инжиниринг", price:"от 1 000 ₽",     border:"border-cyan-500/25",   activeBg:"bg-cyan-500/15 border-cyan-400/70",   activeText:"text-cyan-300",   icon_bg:"bg-cyan-500/15 text-cyan-400" },
+  { value:"repair",      icon:Wrench,   label:"Ремонт техники",   desc:"Запчасти и корпуса",  price:"по согласованию", border:"border-orange-500/25", activeBg:"bg-orange-500/15 border-orange-400/70", activeText:"text-orange-300", icon_bg:"bg-orange-500/15 text-orange-400" },
 ];
 
-const MATERIAL_CHIPS = [
+const MATERIAL_META: { value:string; label:string; sub:string; active:string }[] = [
   { value:"pla",   label:"PLA",   sub:"Универсальный", active:"bg-emerald-500/25 border-emerald-400/70 text-emerald-200" },
   { value:"petg",  label:"PETG",  sub:"Прочный",       active:"bg-blue-500/25 border-blue-400/70 text-blue-200" },
   { value:"abs",   label:"ABS",   sub:"Термостойкий",  active:"bg-amber-500/25 border-amber-400/70 text-amber-200" },
@@ -114,6 +114,12 @@ const MATERIAL_CHIPS = [
   { value:"resin", label:"Resin", sub:"Детализация",   active:"bg-purple-500/25 border-purple-400/70 text-purple-200" },
   { value:"other", label:"?",     sub:"Консультация",  active:"bg-slate-500/25 border-slate-400/70 text-slate-200" },
 ];
+
+const MATERIAL_CHIPS = MATERIAL_META.map(({ value, label, sub, active }) => {
+  const mat = CALC_MATERIALS.find(m => m.id === value);
+  const price = mat && value !== "other" ? `${mat.pricePerGram} ₽/г` : "";
+  return { value, label, sub, price, active };
+});
 
 const DELIVERY_OPTS = [
   { value:"pickup", icon:HomeIcon, label:"Самовывоз",    desc:"Адрес у продавца" },
@@ -205,6 +211,7 @@ export default function Order() {
 
   const primaryMaterial = selectedMaterials[0] || "";
   const estimatedPrice = sharedCalc({ weightG: estWeight, materialId: primaryMaterial, infillPct: estFill, qty: estQty });
+  const primaryMinPrice = CALC_MATERIALS.find(m => m.id === primaryMaterial)?.minPrice;
 
   // Auto-fill from saved user profile
   const savedAddress = (user as any)?.saved_address;
@@ -418,7 +425,7 @@ export default function Order() {
               <div className="space-y-3">
                 {serviceError && <p className="text-xs text-red-400 flex items-center gap-1.5">⚠ Выберите хотя бы одну услугу</p>}
                 <div className="grid grid-cols-2 gap-2.5">
-                  {SERVICE_CARDS.map(({ value, icon:Icon, label, desc, activeBg, activeText, icon_bg }) => {
+                  {SERVICE_CARDS.map(({ value, icon:Icon, label, desc, price, activeBg, activeText, icon_bg }) => {
                     const isActive = selectedServices.includes(value);
                     return (
                       <button key={value} type="button" onClick={() => toggleService(value)}
@@ -428,9 +435,10 @@ export default function Order() {
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all ${isActive ? icon_bg : "bg-white/[0.06] text-white/40"}`}>
                           <Icon className="w-4 h-4" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <div className={`text-sm font-semibold transition-colors ${isActive ? activeText : "text-white/70"}`}>{label}</div>
                           <div className="text-xs text-white/35">{desc}</div>
+                          <div className={`text-[11px] font-bold mt-0.5 ${isActive ? activeText : "text-amber-400/70"}`}>{price}</div>
                         </div>
                         {isActive && <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-current opacity-80" />}
                       </button>
@@ -444,7 +452,7 @@ export default function Order() {
             <StepCard num="03" title="Материал" error={materialError}>
               {materialError && <p className="text-xs text-red-400 mb-3 flex items-center gap-1.5">⚠ Выберите хотя бы один материал</p>}
               <div className="grid grid-cols-3 gap-2">
-                {MATERIAL_CHIPS.map(({ value, label, sub, active }) => {
+                {MATERIAL_CHIPS.map(({ value, label, sub, price, active }) => {
                   const isActive = selectedMaterials.includes(value);
                   return (
                     <button key={value} type="button" onClick={() => toggleMaterial(value)}
@@ -453,10 +461,16 @@ export default function Order() {
                       }`}>
                       <div className={`text-base font-black mb-0.5 ${isActive ? "" : "text-white/60"}`}>{label}</div>
                       <div className="text-[10px] leading-tight text-white/35">{sub}</div>
+                      {price && <div className={`text-[10px] font-bold mt-1 ${isActive ? "" : "text-amber-400/70"}`}>{price}</div>}
                     </button>
                   );
                 })}
               </div>
+              {primaryMinPrice && (
+                <p className="text-xs text-amber-400/60 mt-3 flex items-center gap-1.5">
+                  ⓘ Минимальная стоимость заказа с этим материалом — {primaryMinPrice.toLocaleString("ru")} ₽, даже если деталь весит меньше
+                </p>
+              )}
             </StepCard>
 
             {/* 💰 PRICE ESTIMATOR */}
@@ -522,6 +536,11 @@ export default function Order() {
                 {estimatedPrice && (
                   <p className="text-xs text-white/20 mt-2.5 text-center">
                     Точная стоимость может отличаться · Включает печать, не включает постобработку и доставку
+                  </p>
+                )}
+                {estimatedPrice && primaryMinPrice && (
+                  <p className="text-xs text-amber-400/50 mt-1.5 text-center">
+                    ⓘ Учтена минимальная стоимость заказа для {primaryMaterial.toUpperCase()} — {primaryMinPrice.toLocaleString("ru")} ₽ за штуку
                   </p>
                 )}
               </div>
@@ -660,6 +679,28 @@ export default function Order() {
 
             {/* Submit */}
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
+              <AnimatePresence mode="wait">
+                {estimatedPrice ? (
+                  <motion.div key="badge-price" initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+                    className="flex items-center justify-between gap-3 mb-3 px-5 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25">
+                    <div>
+                      <div className="text-[11px] text-amber-400/60 mb-0.5">Итого к оплате (примерно)</div>
+                      <div className="text-2xl font-black text-amber-400 leading-none">
+                        ≈ {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽
+                      </div>
+                    </div>
+                    <Calculator className="w-8 h-8 text-amber-400/30 shrink-0" />
+                  </motion.div>
+                ) : (
+                  <motion.div key="badge-empty" initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
+                    className="flex items-center gap-3 mb-3 px-5 py-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                    <Calculator className="w-6 h-6 text-white/15 shrink-0" />
+                    <p className="text-xs text-white/25">
+                      {!primaryMaterial ? "Выберите материал и укажите вес — увидите примерную цену здесь" : "Укажите вес детали выше, чтобы увидеть цену"}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <Button type="submit" disabled={isSubmitting}
                 className="w-full h-14 text-base font-bold rounded-2xl btn-shimmer shadow-[0_0_40px_rgba(147,51,234,0.3)] hover:shadow-[0_0_60px_rgba(147,51,234,0.5)] transition-all">
                 {isSubmitting
@@ -669,7 +710,7 @@ export default function Order() {
               </Button>
               {estimatedPrice && (
                 <div className="text-center mt-3 text-sm text-amber-400/70 font-semibold">
-                  Примерная стоимость: ≈ {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽ · будет отправлена вместе с заявкой
+                  Примерная стоимость будет отправлена вместе с заявкой
                 </div>
               )}
               <p className="text-center text-xs text-white/25 mt-2">
