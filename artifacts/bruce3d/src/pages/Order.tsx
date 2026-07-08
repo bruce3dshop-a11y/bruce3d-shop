@@ -544,48 +544,68 @@ export default function Order() {
                 <AnimatePresence mode="wait">
                   {showCombined ? (
                     <motion.div key="price" initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }}
-                      className="rounded-2xl bg-amber-500/10 border border-amber-500/25 overflow-hidden">
+                      className="rounded-2xl border border-amber-500/25 overflow-hidden">
 
-                      {/* Строки разбивки */}
+                      {/* ── Блок: Услуги ── */}
                       {hasServices && (
-                        <div className="px-4 pt-3 space-y-1.5">
-                          {selectedServices.map(s => {
-                            const card = SERVICE_CARDS.find(c => c.value === s);
-                            const minP = SERVICE_MIN_PRICES[s] ?? 0;
-                            if (!card) return null;
-                            return (
-                              <div key={s} className="flex justify-between text-xs text-white/50">
-                                <span>{card.label}</span>
-                                <span className="font-semibold text-amber-400/70">
-                                  {minP > 0 ? `от ${minP.toLocaleString("ru")} ₽` : "по согласованию"}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {hasMaterial && (
-                        <div className={`px-4 space-y-1.5 ${hasServices ? "mt-1.5" : "pt-3"}`}>
-                          {materialEstimates.map(({ matId, meta, result }) => result && (
-                            <div key={matId} className="flex justify-between text-xs text-white/50">
-                              <span>{meta?.name ?? matId.toUpperCase()} ({estWeight} г × {estQty} шт)</span>
-                              <span className="font-semibold text-amber-400/70">
-                                от {result.min.toLocaleString("ru")} ₽
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Итоговая сумма */}
-                      <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-amber-500/20">
-                        <div>
-                          <div className="text-xs text-amber-400/60 mb-0.5">Итого (ориентировочно)</div>
-                          <div className="text-3xl font-black text-amber-400">
-                            {combinedMin.toLocaleString("ru")}–{combinedMax.toLocaleString("ru")} ₽
+                        <div className="bg-violet-500/[0.07] border-b border-white/[0.06]">
+                          <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                            <Printer className="w-3 h-3 text-violet-400/70" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-violet-400/70">Услуги</span>
+                          </div>
+                          <div className="px-4 pb-3 space-y-1.5">
+                            {selectedServices.map(s => {
+                              const card = SERVICE_CARDS.find(c => c.value === s);
+                              const minP = SERVICE_MIN_PRICES[s] ?? 0;
+                              if (!card) return null;
+                              return (
+                                <div key={s} className="flex justify-between text-sm">
+                                  <span className="text-white/60">{card.label}</span>
+                                  <span className="font-bold text-violet-300">
+                                    {minP > 0 ? `от ${minP.toLocaleString("ru")} ₽` : "по согласованию"}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        <Calculator className="w-10 h-10 text-amber-400/30" />
+                      )}
+
+                      {/* ── Блок: Материалы ── */}
+                      {hasMaterial && (
+                        <div className="bg-amber-500/[0.07] border-b border-white/[0.06]">
+                          <div className="px-4 pt-3 pb-1 flex items-center gap-1.5">
+                            <Layers className="w-3 h-3 text-amber-400/70" />
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400/70">Материалы</span>
+                          </div>
+                          <div className="px-4 pb-3 space-y-1.5">
+                            {materialEstimates.map(({ matId, meta, result }) => result && (
+                              <div key={matId} className="flex justify-between text-sm">
+                                <span className="text-white/60">
+                                  {meta?.name ?? matId.toUpperCase()}
+                                  <span className="text-white/30 text-xs ml-1">({estWeight} г × {estQty} шт)</span>
+                                </span>
+                                <span className="font-bold text-amber-300">
+                                  от {result.min.toLocaleString("ru")} ₽
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Итого ── */}
+                      <div className="bg-amber-500/[0.10] px-4 py-4 flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] text-amber-400/60 uppercase tracking-widest mb-0.5">Итого (примерно)</div>
+                          <div className="text-3xl font-black text-amber-400 leading-none">
+                            от {combinedMin.toLocaleString("ru")} ₽
+                          </div>
+                          {combinedMax > combinedMin && (
+                            <div className="text-xs text-amber-400/50 mt-0.5">максимум ~ {combinedMax.toLocaleString("ru")} ₽</div>
+                          )}
+                        </div>
+                        <Calculator className="w-10 h-10 text-amber-400/25 shrink-0" />
                       </div>
                     </motion.div>
                   ) : (
@@ -593,20 +613,18 @@ export default function Order() {
                       className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                       <Calculator className="w-6 h-6 text-white/15 shrink-0" />
                       <p className="text-xs text-white/25">
-                        Выберите услугу или материал, чтобы увидеть примерную стоимость
+                        Выберите услугу или укажите вес материала — увидите примерную цену здесь
                       </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
                 {showCombined && (
-                  <p className="text-xs text-white/20 mt-2.5 text-center">
-                    Точная стоимость определяется после анализа заказа · Доставка не включена
-                  </p>
-                )}
-                {hasMaterial && materialEstimates.some(e => e.meta?.minPrice) && (
-                  <p className="text-xs text-amber-400/50 mt-1.5 text-center">
-                    ⓘ Учтены минимальные цены за штуку по каждому материалу
-                  </p>
+                  <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-green-500/[0.07] border border-green-500/20">
+                    <span className="text-green-400 text-sm shrink-0">↓</span>
+                    <p className="text-xs text-green-400/80 leading-relaxed">
+                      <span className="font-semibold">Цена может измениться в меньшую сторону</span> — после того как администратор изучит ваш файл и уточнит детали заказа. Доставка не включена.
+                    </p>
+                  </div>
                 )}
               </div>
             </motion.div>
