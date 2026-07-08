@@ -24,6 +24,7 @@ interface Order {
   price?: string; payment_link?: string; delivery_type: string;
   delivery_city?: string; delivery_address?: string; delivery_index?: string;
   created_at: string; description: string; file_name?: string;
+  estimated_price?: string | null;
 }
 interface Client {
   id: number; name: string; email: string; phone?: string; telegram?: string;
@@ -278,6 +279,9 @@ function OrdersTab() {
                         {statusLabels[order.status] || order.status}
                       </span>
                       {order.price && <span className="text-xs text-emerald-400 font-bold">{order.price} ₽</span>}
+                      {!order.price && order.estimated_price && (
+                        <span className="text-xs text-amber-400/80 font-medium">≈ {Number(order.estimated_price).toLocaleString("ru")} ₽ (примерно)</span>
+                      )}
                     </div>
                     <div className="font-semibold text-sm">{order.name}</div>
                     <div className="flex gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
