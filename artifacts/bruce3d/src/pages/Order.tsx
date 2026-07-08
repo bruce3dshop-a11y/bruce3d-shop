@@ -106,6 +106,14 @@ const SERVICE_CARDS = [
   { value:"repair",      icon:Wrench,   label:"Ремонт техники",   desc:"Запчасти и корпуса",  price:"по согласованию", border:"border-orange-500/25", activeBg:"bg-orange-500/15 border-orange-400/70", activeText:"text-orange-300", icon_bg:"bg-orange-500/15 text-orange-400" },
 ];
 
+/** Базовые минимальные цены услуг для суммирования в калькуляторе */
+const SERVICE_MIN_PRICES: Record<string, number> = {
+  "3d-print":    300,
+  "3d-modeling": 500,
+  "3d-scanning": 1000,
+  "repair":      0, // по согласованию
+};
+
 const MATERIAL_META: { value:string; label:string; sub:string; active:string }[] = [
   { value:"pla",   label:"PLA",   sub:"Универсальный", active:"bg-emerald-500/25 border-emerald-400/70 text-emerald-200" },
   { value:"petg",  label:"PETG",  sub:"Прочный",       active:"bg-blue-500/25 border-blue-400/70 text-blue-200" },
@@ -210,8 +218,19 @@ export default function Order() {
   const [estQty, setEstQty] = useState<number>(1);
 
   const primaryMaterial = selectedMaterials[0] || "";
-  const estimatedPrice = sharedCalc({ weightG: estWeight, materialId: primaryMaterial, infillPct: estFill, qty: estQty });
+  const materialEstimate = sharedCalc({ weightG: estWeight, materialId: primaryMaterial, infillPct: estFill, qty: estQty });
   const primaryMinPrice = CALC_MATERIALS.find(m => m.id === primaryMaterial)?.minPrice;
+
+  // Сумма базовых цен всех выбранных услуг
+  const servicesTotal = selectedServices.reduce((sum, s) => sum + (SERVICE_MIN_PRICES[s] ?? 0), 0);
+
+  // Итоговая комбинированная оценка (услуги + материал)
+  const hasServices = servicesTotal > 0;
+  const hasMaterial = materialEstimate !== null;
+  const combinedMin  = servicesTotal + (materialEstimate?.min  ?? 0);
+  const combinedMax  = servicesTotal + (materialEstimate?.max  ?? 0);
+  const combinedBase = servicesTotal + (materialEstimate?.base ?? 0);
+  const showCombined = hasServices || hasMaterial;
 
   // Auto-fill from saved user profile
   const savedAddress = (user as any)?.saved_address;
@@ -271,18 +290,19 @@ export default function Order() {
       Object.entries(values).forEach(([k, v]) => { if (v) fd.append(k, v as string); });
       fd.append("serviceType", selectedServices.join(", "));
       fd.append("material", selectedMaterials.join(", "));
-      // Estimated price
-      if (estimatedPrice?.base) {
+      // Estimated price (услуги + материал)
+      if (showCombined && combinedBase > 0) {
         fd.append("estimatedWeight", String(estWeight));
         fd.append("estimatedFill", String(estFill));
         fd.append("estimatedQty", String(estQty));
-        fd.append("estimatedPrice", String(estimatedPrice.base));
+        fd.append("estimatedPrice", String(combinedBase));
+        fd.append("servicesTotal", String(servicesTotal));
       }
       if (uploadedFileUrls.length > 0) fd.append("fileUrls", JSON.stringify(uploadedFileUrls));
       const res = await fetch(`${import.meta.env.BASE_URL}api/order`, { method:"POST", body:fd, credentials:"include" });
       if (!res.ok) throw new Error("Server error");
       const data = await res.json();
-      setSuccess({ orderNumber: data.orderNumber, orderId: data.orderId, estimatedPrice: estimatedPrice?.base });
+      setSuccess({ orderNumber: data.orderNumber, orderId: data.orderId, estimatedPrice: showCombined && combinedBase > 0 ? combinedBase : undefined });
       form.reset(); setSelectedFiles([]); setSelectedServices([]); setSelectedMaterials([]);
     } catch (err: any) {
       const msg = err?.message && !err.message.includes("Server error") ? err.message : "Не удалось отправить заказ. Попробуйте ещё раз.";
@@ -509,38 +529,66 @@ export default function Order() {
                 </div>
                 {/* Result */}
                 <AnimatePresence mode="wait">
-                  {estimatedPrice ? (
+                  {showCombined ? (
                     <motion.div key="price" initial={{ opacity:0, scale:0.95 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }}
-                      className="flex items-center justify-between p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25">
-                      <div>
-                        <div className="text-xs text-amber-400/60 mb-0.5">Ориентировочная цена</div>
-                        <div className="text-3xl font-black text-amber-400">
-                          {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽
+                      className="rounded-2xl bg-amber-500/10 border border-amber-500/25 overflow-hidden">
+
+                      {/* Строки разбивки */}
+                      {hasServices && (
+                        <div className="px-4 pt-3 space-y-1.5">
+                          {selectedServices.map(s => {
+                            const card = SERVICE_CARDS.find(c => c.value === s);
+                            const minP = SERVICE_MIN_PRICES[s] ?? 0;
+                            if (!card) return null;
+                            return (
+                              <div key={s} className="flex justify-between text-xs text-white/50">
+                                <span>{card.label}</span>
+                                <span className="font-semibold text-amber-400/70">
+                                  {minP > 0 ? `от ${minP.toLocaleString("ru")} ₽` : "по согласованию"}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div className="text-xs text-white/25 mt-1">
-                          {primaryMaterial.toUpperCase()} · {estFill}% · {estQty} шт · {estWeight} г
+                      )}
+                      {hasMaterial && (
+                        <div className={`px-4 flex justify-between text-xs text-white/50 ${hasServices ? "mt-1.5" : "pt-3"}`}>
+                          <span>Материал ({primaryMaterial.toUpperCase()}, {estWeight} г × {estQty} шт)</span>
+                          <span className="font-semibold text-amber-400/70">
+                            от {materialEstimate!.min.toLocaleString("ru")} ₽
+                          </span>
                         </div>
+                      )}
+
+                      {/* Итоговая сумма */}
+                      <div className="flex items-center justify-between px-4 py-3 mt-2 border-t border-amber-500/20">
+                        <div>
+                          <div className="text-xs text-amber-400/60 mb-0.5">Итого (ориентировочно)</div>
+                          <div className="text-3xl font-black text-amber-400">
+                            {combinedMin.toLocaleString("ru")}–{combinedMax.toLocaleString("ru")} ₽
+                          </div>
+                        </div>
+                        <Calculator className="w-10 h-10 text-amber-400/30" />
                       </div>
-                      <Calculator className="w-10 h-10 text-amber-400/30" />
                     </motion.div>
                   ) : (
                     <motion.div key="empty" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
                       className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                       <Calculator className="w-6 h-6 text-white/15 shrink-0" />
                       <p className="text-xs text-white/25">
-                        {!primaryMaterial ? "Выберите материал выше" : "Укажите вес детали для расчёта"}
+                        Выберите услугу или материал, чтобы увидеть примерную стоимость
                       </p>
                     </motion.div>
                   )}
                 </AnimatePresence>
-                {estimatedPrice && (
+                {showCombined && (
                   <p className="text-xs text-white/20 mt-2.5 text-center">
-                    Точная стоимость может отличаться · Включает печать, не включает постобработку и доставку
+                    Точная стоимость определяется после анализа заказа · Доставка не включена
                   </p>
                 )}
-                {estimatedPrice && primaryMinPrice && (
+                {hasMaterial && primaryMinPrice && (
                   <p className="text-xs text-amber-400/50 mt-1.5 text-center">
-                    ⓘ Учтена минимальная стоимость заказа для {primaryMaterial.toUpperCase()} — {primaryMinPrice.toLocaleString("ru")} ₽ за штуку
+                    ⓘ Минимальная цена за материал {primaryMaterial.toUpperCase()} — {primaryMinPrice.toLocaleString("ru")} ₽ за штуку
                   </p>
                 )}
               </div>
@@ -680,13 +728,13 @@ export default function Order() {
             {/* Submit */}
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.3 }}>
               <AnimatePresence mode="wait">
-                {estimatedPrice ? (
+                {showCombined ? (
                   <motion.div key="badge-price" initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-8 }}
                     className="flex items-center justify-between gap-3 mb-3 px-5 py-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25">
                     <div>
                       <div className="text-[11px] text-amber-400/60 mb-0.5">Итого к оплате (примерно)</div>
                       <div className="text-2xl font-black text-amber-400 leading-none">
-                        ≈ {estimatedPrice.min.toLocaleString("ru")}–{estimatedPrice.max.toLocaleString("ru")} ₽
+                        ≈ {combinedMin.toLocaleString("ru")}–{combinedMax.toLocaleString("ru")} ₽
                       </div>
                     </div>
                     <Calculator className="w-8 h-8 text-amber-400/30 shrink-0" />
@@ -696,7 +744,7 @@ export default function Order() {
                     className="flex items-center gap-3 mb-3 px-5 py-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
                     <Calculator className="w-6 h-6 text-white/15 shrink-0" />
                     <p className="text-xs text-white/25">
-                      {!primaryMaterial ? "Выберите материал и укажите вес — увидите примерную цену здесь" : "Укажите вес детали выше, чтобы увидеть цену"}
+                      Выберите услугу или укажите вес материала — увидите примерную цену здесь
                     </p>
                   </motion.div>
                 )}
@@ -708,7 +756,7 @@ export default function Order() {
                   : <><Sparkles className="mr-2 h-5 w-5" /> Отправить заказ <ArrowRight className="ml-2 h-5 w-5" /></>
                 }
               </Button>
-              {estimatedPrice && (
+              {showCombined && combinedBase > 0 && (
                 <div className="text-center mt-3 text-sm text-amber-400/70 font-semibold">
                   Примерная стоимость будет отправлена вместе с заявкой
                 </div>
