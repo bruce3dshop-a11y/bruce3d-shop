@@ -11,10 +11,16 @@ export const usersTable = pgTable("users", {
   telegram: text("telegram"),
   password_hash: text("password_hash"),
   is_admin: boolean("is_admin").default(false),
+  avatar_url: text("avatar_url"),
+  saved_city: text("saved_city"),
+  saved_address: text("saved_address"),
+  saved_index: text("saved_index"),
+  saved_full_name: text("saved_full_name"),
   created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, created_at: true });
+export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, created_at: true, updated_at: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof usersTable.$inferSelect;
 
@@ -40,6 +46,7 @@ export const ordersTable = pgTable("orders", {
   status: text("status").default("new").notNull(),
   price: text("price"),
   payment_link: text("payment_link"),
+  estimated_price: text("estimated_price"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
