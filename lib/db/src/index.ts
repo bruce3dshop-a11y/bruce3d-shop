@@ -17,7 +17,15 @@ export const db = drizzle(pool, { schema });
 pool.query(`
   ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS delivery_full_name text,
-    ADD COLUMN IF NOT EXISTS delivery_phone text
+    ADD COLUMN IF NOT EXISTS delivery_phone text,
+    ADD COLUMN IF NOT EXISTS estimated_price text;
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url text,
+    ADD COLUMN IF NOT EXISTS saved_city text,
+    ADD COLUMN IF NOT EXISTS saved_address text,
+    ADD COLUMN IF NOT EXISTS saved_index text,
+    ADD COLUMN IF NOT EXISTS saved_full_name text,
+    ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now()
 `).catch((err) => console.error("[db-migrate]", err));
 
 export * from "./schema";
