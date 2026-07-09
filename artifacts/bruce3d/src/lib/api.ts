@@ -23,9 +23,13 @@ const API_BASE = import.meta.env.VITE_API_URL
     const extraHeaders: Record<string, string> = {};
     if (adminToken) extraHeaders["X-Admin-Token"] = adminToken;
 
+    // Не устанавливаем Content-Type для FormData — браузер сам ставит с правильным boundary
+    const isFormData = options?.body instanceof FormData;
+    const contentTypeHeader = isFormData ? {} : { "Content-Type": "application/json" };
+
     const res = await fetch(apiUrl(path), {
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...extraHeaders, ...options?.headers },
+      headers: { ...contentTypeHeader, ...extraHeaders, ...options?.headers },
       ...options,
     });
     if (!res.ok) {
