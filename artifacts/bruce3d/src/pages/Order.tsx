@@ -70,7 +70,7 @@ function ConfettiEffect({ active }: { active: boolean }) {
 
 /* ─── Zod schema ────────────────────────────────────────────────────────── */
 const formSchema = z.object({
-  name:             z.string().min(2, { message: "Имя должно содержать минимум 2 символа." }),
+  name:             z.string().min(2, { message: "ФИО должно содержать минимум 2 символа." }),
   phone:            z.string().optional(),
   email:            z.string().email({ message: "Введите корректный email." }).optional().or(z.literal("")),
   telegram:         z.string().optional(),
@@ -253,7 +253,7 @@ export default function Order() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user?.name || "", phone: user?.phone || "", email: user?.email || "", telegram: user?.telegram || "",
+      name: (user as any)?.saved_full_name || user?.name || "", phone: user?.phone || "", email: user?.email || "", telegram: user?.telegram || "",
       description: "", deliveryType: "pickup",
       deliveryFullName: savedFullName || "", deliveryPhone: user?.phone || "", deliveryCity: savedCity || "",
       deliveryAddress: savedAddress || "", deliveryIndex: savedIndex || "",
@@ -412,7 +412,7 @@ export default function Order() {
                   <FormItem>
                     <div className="relative">
                       <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <FormControl><Input placeholder="Ваше имя *" {...field} className={`pl-10 ${INPUT_CLS}`} /></FormControl>
+                      <FormControl><Input placeholder="ФИО *" {...field} className={`pl-10 ${INPUT_CLS}`} /></FormControl>
                     </div>
                     <FormMessage />
                   </FormItem>
