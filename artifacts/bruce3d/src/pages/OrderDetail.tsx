@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
   import { useRoute } from "wouter";
-  import { useQuery } from "@tanstack/react-query";
+  import { useQuery, useQueryClient } from "@tanstack/react-query";
   import { motion } from "framer-motion";
   import { apiFetch, apiUrl } from "@/lib/api";
   import { useAuth } from "@/lib/auth-context";
@@ -88,6 +88,7 @@ import { useState, useEffect, useRef } from "react";
     const orderId = Number(params?.id);
     const { user, isAdmin } = useAuth();
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const [messages, setMessages] = useState<Message[]>([]);
     const [msgText, setMsgText] = useState("");
     const [sending, setSending] = useState(false);
@@ -157,6 +158,16 @@ import { useState, useEffect, useRef } from "react";
         try {
           await apiFetch(`orders/${orderId}/cancel`, { method: "POST" });
           toast({ title: "Заказ отменён" });
+          // Мгновенно обновляем кэш Dashboard — заказ пропадает без задержки
+          queryClient.setQueryData(["my-orders"], (old: any) => {
+            if (!old?.orders) return old;
+            return {
+              ...old,
+              orders: old.orders.map((o: any) =>
+                o.id === orderId ? { ...o, status: "cancelled" } : o
+              ),
+            };
+          });
           refetch();
         } catch (err: any) {
           toast({ title: err?.message || "Ошибка отмены", variant: "destructive" });
